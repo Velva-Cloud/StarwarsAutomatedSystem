@@ -115,6 +115,54 @@ local function registerSAMCommands()
             end
         end)
     :End()
+
+    -- Incident commands ------------------------------------------------------
+
+    command.new("zeus_incident_start")
+        :SetPermission("zeus_incident_start", "admin")
+        :AddArg("text", {hint = "incident name"})
+        :Help("Start a ZEUS incident/operation with the given name.")
+        :OnExecute(function(ply, name)
+            if not ZEUS.Incidents or not ZEUS.Incidents.StartIncident then return end
+            local ok, err = ZEUS.Incidents.StartIncident(ply, name)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to start incident."))
+            else
+                ply:ChatPrint("[ZEUS] Incident started: " .. name)
+            end
+        end)
+    :End()
+
+    command.new("zeus_incident_end")
+        :SetPermission("zeus_incident_end", "admin")
+        :Help("End the active ZEUS incident/operation.")
+        :OnExecute(function(ply)
+            if not ZEUS.Incidents or not ZEUS.Incidents.EndIncident then return end
+            local ok, err = ZEUS.Incidents.EndIncident(ply)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to end incident."))
+            else
+                ply:ChatPrint("[ZEUS] Incident ended.")
+            end
+        end)
+    :End()
+
+    command.new("zeus_incident_note")
+        :SetPermission("zeus_incident_note", "admin")
+        :AddArg("player", {single_target = true})
+        :AddArg("text", {hint = "note"})
+        :Help("Attach a performance note for a player in the current incident.")
+        :OnExecute(function(ply, targets, note)
+            if not ZEUS.Incidents or not ZEUS.Incidents.AddNote then return end
+            local target = targets[1]
+            local ok, err = ZEUS.Incidents.AddNote(ply, target, note)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to add note."))
+            else
+                ply:ChatPrint("[ZEUS] Note added for " .. target:Nick() .. ".")
+            end
+        end)
+    :End()
 end
 
 hook.Add("SAM.LoadedConfig", "ZEUS_RegisterSAMCommandsShared", registerSAMCommands)
