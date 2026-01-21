@@ -107,10 +107,7 @@ function Identity.SavePlayer(ply)
 end
 
 hook.Add("PlayerInitialSpawn", "ZEUS_Identity_Load", function(ply)
-    timer.Simple(0, function()
-        if not IsValid(ply) then return end
-        Identity.LoadPlayer(ply)
-    end)
+    Identity.LoadPlayer(ply)
 end)
 
 hook.Add("PlayerDisconnected", "ZEUS_Identity_Save", function(ply)
@@ -268,7 +265,7 @@ function Identity.SyncToClient(ply)
 end
 
 -- On initial spawn, if no chosen_name, ask client for it
-hook.Add("PlayerInitialSpawn", "ZEUS_Identity_RequestName", function(ply)
+hook.Add("PlayerSpawn", "ZEUS_Identity_RequestName", function(ply)
     timer.Simple(2, function()
         if not IsValid(ply) or not ply.zeusData then return end
         if ply.zeusData.chosen_name and ply.zeusData.chosen_name ~= "" then return end
@@ -310,11 +307,12 @@ end
 local function registerSAMCommands()
     if not sam or not sam.command or not sam.command.new then return end
 
+    sam.print("ZEUS: registering SAM commands")
+
     sam.command.new("zeus_cc_to_ct")
         :SetCategory("ZEUS")
         :SetPermission("zeus_cc_to_ct", "admin")
         :AddArg("player", {single_target = true})
-        :GetRestArgs()
         :OnExecute(function(ply, targets)
             local target = targets[1]
             local ok, err = Identity.PromoteCCtoCT(ply, target)
@@ -360,12 +358,6 @@ local function registerSAMCommands()
         :Register()
 end
 
-hook.Add("Initialize", "ZEUS_RegisterSAMCommands", function()
-    -- SAM may not be fully loaded yet at Initialize; wait until its API is present.
-    timer.Create("ZEUS_SAM_Wait", 1, 0, function()
-        if sam and sam.command and sam.command.new then
-            registerSAMCommands()
-            timer.Remove("ZEUS_SAM_Wait")
-        end
-    end)
+hook.Add("SAM.LoadedConfig", "ZEUS_RegisterSAMCommands", function()
+    registerSAMCommands()
 end)
