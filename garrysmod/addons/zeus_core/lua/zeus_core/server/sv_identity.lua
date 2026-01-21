@@ -520,6 +520,18 @@ local function registerSAMCommands()
             end
         end)
     :End()
+
+    -- Debug: print all SAM commands and their categories so we can verify ZEUS commands
+    if sam.command.get_commands then
+        print("[ZEUS] Registered SAM commands; listing all commands and categories:")
+        for _, cmd in ipairs(sam.command.get_commands()) do
+            print(string.format("  - %s (category: %s, permission: %s, menu_hide: %s)",
+                tostring(cmd.name),
+                tostring(cmd.category),
+                tostring(cmd.permission),
+                tostring(cmd.menu_hide)))
+        end
+    end
 end
 
 hook.Add("SAM.LoadedConfig", "ZEUS_RegisterSAMCommands", function()
