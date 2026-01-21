@@ -309,10 +309,13 @@ local function registerSAMCommands()
 
     sam.print("ZEUS: registering SAM commands")
 
-    sam.command.new("zeus_cc_to_ct")
-        :SetCategory("ZEUS")
+    local command = sam.command
+    command.set_category("ZEUS")
+
+    command.new("zeus_cc_to_ct")
         :SetPermission("zeus_cc_to_ct", "admin")
         :AddArg("player", {single_target = true})
+        :Help("Promote a Cadet (CC) to Clone Trooper (CT).")
         :OnExecute(function(ply, targets)
             local target = targets[1]
             local ok, err = Identity.PromoteCCtoCT(ply, target)
@@ -322,14 +325,14 @@ local function registerSAMCommands()
                 ply:ChatPrint("[ZEUS] Promoted Cadet to CT.")
             end
         end)
-        :Register()
+    :End()
 
-    sam.command.new("zeus_assign_regiment")
-        :SetCategory("ZEUS")
+    command.new("zeus_assign_regiment")
         :SetPermission("zeus_assign_regiment", "admin")
         :AddArg("player", {single_target = true})
         :AddArg("text", {hint = "regiment key"})
         :AddArg("text", {hint = "starting rank", optional = true})
+        :Help("Assign a trooper to a regiment and optionally set starting rank.")
         :OnExecute(function(ply, targets, regimentKey, startingRank)
             local target = targets[1]
             local ok, err = Identity.AssignToRegiment(ply, target, regimentKey, startingRank ~= "" and startingRank or nil)
@@ -339,13 +342,13 @@ local function registerSAMCommands()
                 ply:ChatPrint("[ZEUS] Assigned to regiment " .. regimentKey .. ".")
             end
         end)
-        :Register()
+    :End()
 
-    sam.command.new("zeus_set_rank")
-        :SetCategory("ZEUS")
+    command.new("zeus_set_rank")
         :SetPermission("zeus_set_rank", "admin")
         :AddArg("player", {single_target = true})
         :AddArg("text", {hint = "rank"})
+        :Help("Set a trooper's rank (must be below your own).")
         :OnExecute(function(ply, targets, newRank)
             local target = targets[1]
             local ok, err = Identity.SetRank(ply, target, newRank)
@@ -355,7 +358,7 @@ local function registerSAMCommands()
                 ply:ChatPrint("[ZEUS] Rank set to " .. newRank .. ".")
             end
         end)
-        :Register()
+    :End()
 end
 
 hook.Add("SAM.LoadedConfig", "ZEUS_RegisterSAMCommands", function()
