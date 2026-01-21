@@ -206,6 +206,38 @@ local function safeChangeTeam(ply, teamID)
     ply:changeTeam(teamID, true, true, true)
 end
 
+-- Set a player's regiment to a pre-regiment tag (CC/CT) and update job/name
+function Identity.SetPreRegiment(staff, target, tag)
+    if not IsValid(staff) or not IsValid(target) then return false, "Invalid player" end
+    if tag ~= ZEUS.Config.DefaultCadetTag and tag ~= ZEUS.Config.DefaultTrooperTag then
+        return false, "Invalid pre-regiment tag."
+    end
+
+    local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
+    if not isStaffOverride then
+        return false, "Only staff can directly set CC/CT."
+    end
+
+    target.zeusData = target.zeusData or {}
+    target.zeusData.regiment = tag
+
+    -- When going back to CC, clear rank so they behave like a Cadet again
+    if tag == ZEUS.Config.DefaultCadetTag then
+        target.zeusData.rank = nil
+    end
+
+    local teamID = getTeamForRegiment(tag)
+    if teamID then
+        safeChangeTeam(target, teamID)
+    end
+
+    Identity.ApplyRPName(target)
+    Identity.SyncToClient(target)
+    Identity.SavePlayer(target)
+
+    return true
+end
+
 function Identity.CanPromoteCCtoCT(staffRank)
     return ZEUS.RankIsAboveSergeant(staffRank)
 end
@@ -399,7 +431,7 @@ local function registerSAMCommands()
         :SetPermission("zeus_set_rank", "admin")
         :AddArg("player", {single_target = true})
         :AddArg("text", {hint = "rank"})
-        :Help("Set a trooper's rank (must be below your own).")
+        :Help("Set a trooper's rank (must be below your own unless staff).")
         :OnExecute(function(ply, targets, newRank)
             local target = targets[1]
             local ok, err = Identity.SetRank(ply, target, newRank)
@@ -407,6 +439,36 @@ local function registerSAMCommands()
                 ply:ChatPrint("[ZEUS] " .. (err or "Failed to set rank."))
             else
                 ply:ChatPrint("[ZEUS] Rank set to " .. newRank .. ".")
+            end
+        end)
+    :End()
+
+    command.new("zeus_set_cc")
+        :SetPermission("zeus_set_cc", "admin")
+        :AddArg("player", {single_target = true})
+        :Help("Force a player back to CC (Cadet). Staff-only override.")
+        :OnExecute(function(ply, targets)
+            local target = targets[1]
+            local ok, err = Identity.SetPreRegiment(ply, target, ZEUS.Config.DefaultCadetTag)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to set CC."))
+            else
+                ply:ChatPrint("[ZEUS] Set player to CC.")
+            end
+        end)
+    :End()
+
+    command.new("zeus_set_ct")
+        :SetPermission("zeus_set_ct", "admin")
+        :AddArg("player", {single_target = true})
+        :Help("Force a player to CT (Clone Trooper). Staff-only override.")
+        :OnExecute(function(ply, targets)
+            local target = targets[1]
+            local ok, err = Identity.SetPreRegiment(ply, target, ZEUS.Config.DefaultTrooperTag)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to set CT."))
+            else
+                ply:ChatPrint("[ZEUS] Set player to CT.")
             end
         end)
     :End()
