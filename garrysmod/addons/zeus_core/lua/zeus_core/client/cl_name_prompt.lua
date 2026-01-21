@@ -83,5 +83,13 @@ net.Receive("ZEUS_Identity_RequestName", function()
         chat.AddText(Color(120, 180, 255), "[ZEUS] ", color_white, "Name prompt requested. Opening name menu...")
     end
 
+    print("[ZEUS] Client received ZEUS_Identity_RequestName, opening prompt...")
+
     timer.Simple(0.5, openNamePrompt)
+end)
+
+-- Fallback: allow client to manually open the name prompt via console
+concommand.Add("zeus_open_name_prompt", function()
+    print("[ZEUS] Manually opening name prompt via console command.")
+    openNamePrompt()
 end)
