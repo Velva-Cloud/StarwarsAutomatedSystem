@@ -1,5 +1,3 @@
-if SAM_LOADED then return end
-
 ZEUS = ZEUS or {}
 ZEUS.Identity = ZEUS.Identity or {}
 

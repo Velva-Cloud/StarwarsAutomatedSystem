@@ -56,16 +56,16 @@ sam.menu.add_tab("https://raw.githubusercontent.com/Srlion/Addons-Data/main/icon
 		table.Empty(category_list.categories)
 
 		for k, v in ipairs(sam.command.get_commands()) do
-			-- Ensure ZEUS commands are always visible in the menu, even if permissions
-			-- are not yet fully configured for the current rank. Other commands still
-			-- respect the standard permission/menu_hide filters.
+			local has_perm = (not v.permission) or LocalPlayer():HasPermission(v.permission)
 			local is_zeus = v.category == "ZEUS" or (v.name and v.name:sub(1, 5) == "zeus_")
 
-			if not is_zeus and ((v.permission and not LocalPlayer():HasPermission(v.permission)) or v.menu_hide) then
+			-- ZEUS commands: always visible in the list (for debugging/management),
+			-- other commands respect permission/menu_hide filters as usual.
+			if not is_zeus and (not has_perm or v.menu_hide) then
 				continue
 			end
 
-			local item = category_list:add_item(v.name, v.category)
+			local item = category_list:add_item(v.name, v.category or (is_zeus and "ZEUS" or "Other"))
 			item:InvalidateParent(true)
 			item.help = v.help
 			item.command = v
