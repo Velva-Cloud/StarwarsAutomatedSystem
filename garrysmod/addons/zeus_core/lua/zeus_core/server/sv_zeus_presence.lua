@@ -18,9 +18,9 @@ end
 
 function Presence.IsActive()
     -- Show banner only when staff presence is LOW.
-    -- Example: with threshold = 2 (default), show the banner when staff_count &lt; 2.
+    -- Example: with threshold = 2 (default), show the banner when staff_count < 2.
     local threshold = ZEUS.Config.ZeusStaffThreshold or 2
-    return Presence.GetStaffCount() &lt; threshold
+    return Presence.GetStaffCount() < threshold
 end
 
 local function broadcastStatus()
