@@ -1,0 +1,11 @@
+"Server"
+{
+	"MaxPlayers"		"24"
+	"ServerName"		"Garry's Mod dedicated server"
+	"MOD"		"garrysmod"
+	"Map"		"gm_construct"
+	"Secure"		"1"
+	"Network"		"0"
+	"Port"		"27015"
+	"Gamemode"		"starwarsrp"
+}

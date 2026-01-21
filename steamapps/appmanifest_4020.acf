@@ -1,0 +1,49 @@
+"AppState"
+{
+	"appid"		"4020"
+	"Universe"		"1"
+	"LauncherPath"		"C:\\Users\\hilll\\Downloads\\steamcmd\\steamcmd.exe"
+	"name"		"Garry's Mod Dedicated Server"
+	"StateFlags"		"4"
+	"installdir"		"GarrysModDS"
+	"LastUpdated"		"1769013672"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"6743613458"
+	"StagingSize"		"0"
+	"buildid"		"21133562"
+	"LastOwner"		"0"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"3478242448"
+	"BytesDownloaded"		"3478242448"
+	"BytesToStage"		"6743613458"
+	"BytesStaged"		"6743613458"
+	"TargetBuildID"		"21133562"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"1004"
+		{
+			"manifest"		"5612541580377302256"
+			"size"		"64647928"
+		}
+		"4021"
+		{
+			"manifest"		"6027060618820795084"
+			"size"		"6618299194"
+		}
+		"4022"
+		{
+			"manifest"		"5971356270898708669"
+			"size"		"60666336"
+		}
+	}
+	"UserConfig"
+	{
+	}
+	"MountedConfig"
+	{
+	}
+}

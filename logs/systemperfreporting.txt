@@ -1,0 +1,16 @@
+
+
+[2026-01-21 16:42:44] Client version: no bootstrapper found
+[2026-01-21 16:42:44] Initialized system perf reporting manager
+
+
+[2026-01-21 16:42:59] Client version: no bootstrapper found
+[2026-01-21 16:42:59] Initialized system perf reporting manager
+
+
+[2026-01-21 16:51:09] Client version: no bootstrapper found
+[2026-01-21 16:51:09] Initialized system perf reporting manager
+
+
+[2026-01-21 16:51:20] Client version: no bootstrapper found
+[2026-01-21 16:51:20] Initialized system perf reporting manager

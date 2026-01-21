@@ -1,0 +1,24 @@
+
+
+[2026-01-21 16:42:44] Client version: no bootstrapper found
+[2026-01-21 16:42:44] ThreadedReadFromDisk: loading appinfo cache from: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:42:44] ThreadedReadFromDisk: failed to open file: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:42:44] CAppInfoCacheReadFromDiskThread took 1 milliseconds to initialize
+
+
+[2026-01-21 16:42:59] Client version: no bootstrapper found
+[2026-01-21 16:42:59] ThreadedReadFromDisk: loading appinfo cache from: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:42:59] ThreadedReadFromDisk: failed to open file: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:42:59] CAppInfoCacheReadFromDiskThread took 2 milliseconds to initialize
+
+
+[2026-01-21 16:51:09] Client version: no bootstrapper found
+[2026-01-21 16:51:09] ThreadedReadFromDisk: loading appinfo cache from: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:51:09] ThreadedReadFromDisk: failed to open file: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:51:09] CAppInfoCacheReadFromDiskThread took 1 milliseconds to initialize
+
+
+[2026-01-21 16:51:20] Client version: no bootstrapper found
+[2026-01-21 16:51:20] ThreadedReadFromDisk: loading appinfo cache from: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:51:20] ThreadedReadFromDisk: failed to open file: C:\Users\hilll\Desktop\StarwarsRP-AutoProject/appcache/appinfo.vdf
+[2026-01-21 16:51:20] CAppInfoCacheReadFromDiskThread took 1 milliseconds to initialize
