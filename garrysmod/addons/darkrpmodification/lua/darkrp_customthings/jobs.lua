@@ -19,19 +19,117 @@ Add your custom jobs under the following line:
 
 
 --[[---------------------------------------------------------------------------
+Clone Wars / StarWarsRP jobs
+---------------------------------------------------------------------------]]
+
+-- Cadet (default spawn)
+TEAM_CADET = DarkRP.createJob("Cadet", {
+    color = Color(150, 150, 255, 255),
+    model = {
+        "models/player/Group03/male_01.mdl",
+        "models/player/Group03/male_02.mdl",
+        "models/player/Group03/male_03.mdl",
+        "models/player/Group03/male_04.mdl",
+    },
+    description = [[New recruits undergoing basic training.]],
+    weapons = {"weapon_pistol"},
+    command = "cadet",
+    max = 0,
+    salary = 0,
+    admin = 0,
+    vote = false,
+    hasLicense = false,
+    category = "Clones",
+})
+
+-- Clone Trooper (unassigned CT)
+TEAM_CT = DarkRP.createJob("Clone Trooper", {
+    color = Color(120, 120, 255, 255),
+    model = {
+        "models/player/Group03/male_05.mdl",
+        "models/player/Group03/male_06.mdl",
+        "models/player/Group03/male_07.mdl",
+    },
+    description = [[Fully trained clone trooper without assigned regiment.]],
+    weapons = {"weapon_pistol", "weapon_smg1"},
+    command = "ct",
+    max = 0,
+    salary = 0,
+    admin = 0,
+    vote = false,
+    hasLicense = false,
+    category = "Clones",
+})
+
+-- 501st Trooper
+TEAM_501ST = DarkRP.createJob("501st Trooper", {
+    color = Color(50, 100, 255, 255),
+    model = {
+        "models/player/Group03/male_08.mdl",
+        "models/player/Group03/female_01.mdl",
+    },
+    description = [[Member of the elite 501st Legion.]],
+    weapons = {"weapon_pistol", "weapon_ar2"},
+    command = "501st",
+    max = 0,
+    salary = 0,
+    admin = 0,
+    vote = false,
+    hasLicense = false,
+    category = "501st",
+})
+
+-- Shock Trooper
+TEAM_SHOCK = DarkRP.createJob("Shock Trooper", {
+    color = Color(200, 50, 50, 255),
+    model = {
+        "models/player/Group03/male_09.mdl",
+        "models/player/Group03/female_02.mdl",
+    },
+    description = [[Coruscant Guard / Shock Trooper responsible for security and law enforcement.]],
+    weapons = {"weapon_pistol", "weapon_smg1", "stunstick"},
+    command = "shock",
+    max = 0,
+    salary = 0,
+    admin = 0,
+    vote = false,
+    hasLicense = false,
+    category = "Shock",
+})
+
+-- 212th Trooper
+TEAM_212TH = DarkRP.createJob("212th Trooper", {
+    color = Color(255, 180, 50, 255),
+    model = {
+        "models/player/Group03/male_01.mdl",
+        "models/player/Group03/male_02.mdl",
+    },
+    description = [[Trooper of the 212th Attack Battalion.]],
+    weapons = {"weapon_pistol", "weapon_ar2"},
+    command = "212th",
+    max = 0,
+    salary = 0,
+    admin = 0,
+    vote = false,
+    hasLicense = false,
+    category = "212th",
+})
+
+--[[---------------------------------------------------------------------------
 Define which team joining players spawn into and what team you change to if demoted
 ---------------------------------------------------------------------------]]
-GAMEMODE.DefaultTeam = TEAM_CITIZEN
+GAMEMODE.DefaultTeam = TEAM_CADET
+
 --[[---------------------------------------------------------------------------
 Define which teams belong to civil protection
-Civil protection can set warrants, make people wanted and do some other police related things
 ---------------------------------------------------------------------------]]
 GAMEMODE.CivilProtection = {
-    [TEAM_POLICE] = true,
-    [TEAM_CHIEF] = true,
-    [TEAM_MAYOR] = true,
+    -- You can add Shock or specific officer jobs here later, e.g.:
+    -- [TEAM_SHOCK] = true,
 }
+
 --[[---------------------------------------------------------------------------
 Jobs that are hitmen (enables the hitman menu)
 ---------------------------------------------------------------------------]]
-DarkRP.addHitmanTeam(TEAM_MOB)
+-- No hitmen in this StarWarsRP schema for now
+-- DarkRP.addHitmanTeam(TEAM_MOB)
