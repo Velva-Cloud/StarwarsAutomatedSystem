@@ -78,5 +78,10 @@ local function openNamePrompt()
 end
 
 net.Receive("ZEUS_Identity_RequestName", function()
+    -- Debug feedback so we know the client received the prompt request
+    if chat and chat.AddText then
+        chat.AddText(Color(120, 180, 255), "[ZEUS] ", color_white, "Name prompt requested. Opening name menu...")
+    end
+
     timer.Simple(0.5, openNamePrompt)
 end)
