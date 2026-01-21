@@ -417,8 +417,8 @@ local function registerSAMCommands()
     sam.print("ZEUS: registering SAM commands")
 
     local command = sam.command
-    -- Use the existing DarkRP category so commands appear in the SAM menu under DarkRP.
-    command.set_category("DarkRP")
+    -- Place ZEUS commands in their own SAM category so they appear under a \"ZEUS\" section in the Commands tab.
+    command.set_category("ZEUS")
 
     command.new("zeus_cc_to_ct")
         :SetPermission("zeus_cc_to_ct", "admin")
