@@ -195,7 +195,8 @@ function Identity.PromoteCCtoCT(staff, target)
     if not target.zeusData then return false, "Target has no identity data" end
 
     local sRank = staff.zeusData and staff.zeusData.rank
-    if not sRank or not Identity.CanPromoteCCtoCT(sRank) then
+    local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
+    if (not sRank or not Identity.CanPromoteCCtoCT(sRank)) and not isStaffOverride then
         return false, "You are not high enough rank to promote Cadets."
     end
 
@@ -217,6 +218,13 @@ function Identity.AssignToRegiment(staff, target, regimentKey, startingRank)
         return false, "Invalid regiment."
     end
 
+    -- Officers normally handle regiment assignment, but SAM-admins override.
+    local sRank = staff.zeusData and staff.zeusData.rank
+    local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
+    if not isStaffOverride and (not sRank or not Identity.CanPromoteOthers(sRank)) then
+        return false, "You are not high enough rank to assign regiments."
+    end
+
     target.zeusData = target.zeusData or {}
     target.zeusData.regiment = regimentKey
     target.zeusData.rank = startingRank or "PVT"
@@ -233,7 +241,8 @@ function Identity.SetRank(staff, target, newRank)
     if not ZEUS.RankIndex[newRank] then return false, "Invalid rank." end
 
     local sRank = staff.zeusData and staff.zeusData.rank
-    if not sRank or getRankIndex(sRank) <= getRankIndex(newRank) then
+    local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
+    if not isStaffOverride and (not sRank or getRankIndex(sRank) <= getRankIndex(newRank)) then
         return false, "You cannot set rank equal or above your own."
     end
 
@@ -264,10 +273,14 @@ function Identity.SyncToClient(ply)
     net.Send(ply)
 end
 
--- On initial spawn, if no chosen_name, ask client for it
-hook.Add("PlayerSpawn", "ZEUS_Identity_RequestName", function(ply)
+-- On spawn, ensure RP name is enforced and if no chosen_name, ask client for it
+hook.Add("PlayerSpawn", "ZEUS_Identity_OnSpawn", function(ply)
     timer.Simple(2, function()
         if not IsValid(ply) or not ply.zeusData then return end
+
+        -- Force the ZEUS-formatted RP name in case other addons changed it
+        Identity.ApplyRPName(ply)
+
         if ply.zeusData.chosen_name and ply.zeusData.chosen_name ~= "" then return end
 
         net.Start("ZEUS_Identity_RequestName")
@@ -310,7 +323,8 @@ local function registerSAMCommands()
     sam.print("ZEUS: registering SAM commands")
 
     local command = sam.command
-    command.set_category("ZEUS")
+    -- Use the existing DarkRP category so commands appear in the SAM menu under DarkRP.
+    command.set_category("DarkRP")
 
     command.new("zeus_cc_to_ct")
         :SetPermission("zeus_cc_to_ct", "admin")
