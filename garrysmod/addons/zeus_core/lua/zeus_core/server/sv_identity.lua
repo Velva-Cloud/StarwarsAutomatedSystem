@@ -360,4 +360,12 @@ local function registerSAMCommands()
         :Register()
 end
 
-hook.Add("Initialize", "ZEUS_RegisterSAMCommands", registerSAMCommands)
+hook.Add("Initialize", "ZEUS_RegisterSAMCommands", function()
+    -- SAM may not be fully loaded yet at Initialize; wait until its API is present.
+    timer.Create("ZEUS_SAM_Wait", 1, 0, function()
+        if sam and sam.command and sam.command.new then
+            registerSAMCommands()
+            timer.Remove("ZEUS_SAM_Wait")
+        end
+    end)
+end)

@@ -8,6 +8,9 @@ https://darkrp.miraheze.org/wiki/DarkRP:Categories
 
 In case that page can't be reached, here's an example with explanation:
 
+Add new categories under the next line!
+---------------------------------------------------------------------------]]
+
 DarkRP.createCategory{
     name = "Clones",
     categorises = "jobs",
@@ -43,8 +46,4 @@ DarkRP.createCategory{
     canSee = function(ply) return true end,
     sortOrder = 40,
 }
-
-
-Add new categories under the next line!
----------------------------------------------------------------------------]]
 
