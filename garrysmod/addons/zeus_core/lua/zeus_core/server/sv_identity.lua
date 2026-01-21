@@ -182,6 +182,30 @@ local function getRankIndex(rank)
     return ZEUS.RankIndex[rank or ""] or 0
 end
 
+-- Map ZEUS regiment tags to DarkRP teams (if they exist)
+local function getTeamForRegiment(regiment)
+    if not RPExtraTeams then return nil end
+
+    if regiment == ZEUS.Config.DefaultCadetTag then
+        return TEAM_CADET
+    elseif regiment == ZEUS.Config.DefaultTrooperTag then
+        return TEAM_CT
+    elseif regiment == "501st" then
+        return TEAM_501ST
+    elseif regiment == "Shock" then
+        return TEAM_SHOCK
+    elseif regiment == "212th" then
+        return TEAM_212TH
+    end
+
+    return nil
+end
+
+local function safeChangeTeam(ply, teamID)
+    if not teamID or not ply.changeTeam then return end
+    ply:changeTeam(teamID, true, true, true)
+end
+
 function Identity.CanPromoteCCtoCT(staffRank)
     return ZEUS.RankIsAboveSergeant(staffRank)
 end
@@ -205,6 +229,13 @@ function Identity.PromoteCCtoCT(staff, target)
     end
 
     target.zeusData.regiment = ZEUS.Config.DefaultTrooperTag
+
+    -- Change DarkRP job to Clone Trooper if that team exists
+    local teamID = getTeamForRegiment(ZEUS.Config.DefaultTrooperTag)
+    if teamID then
+        safeChangeTeam(target, teamID)
+    end
+
     Identity.ApplyRPName(target)
     Identity.SyncToClient(target)
     Identity.SavePlayer(target)
@@ -228,6 +259,12 @@ function Identity.AssignToRegiment(staff, target, regimentKey, startingRank)
     target.zeusData = target.zeusData or {}
     target.zeusData.regiment = regimentKey
     target.zeusData.rank = startingRank or "PVT"
+
+    -- Update DarkRP job to match regiment if possible
+    local teamID = getTeamForRegiment(regimentKey)
+    if teamID then
+        safeChangeTeam(target, teamID)
+    end
 
     Identity.ApplyRPName(target)
     Identity.SyncToClient(target)
