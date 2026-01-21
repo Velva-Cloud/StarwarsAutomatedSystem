@@ -238,6 +238,29 @@ function Identity.SetPreRegiment(staff, target, tag)
     return true
 end
 
+-- Staff tool: reset a player's chosen name and immediately prompt again
+function Identity.ResetName(staff, target)
+    if not IsValid(staff) or not IsValid(target) then return false, "Invalid player" end
+
+    local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
+    if not isStaffOverride then
+        return false, "Only staff can reset names."
+    end
+
+    target.zeusData = target.zeusData or {}
+    target.zeusData.chosen_name = nil
+
+    Identity.ApplyRPName(target)
+    Identity.SyncToClient(target)
+    Identity.SavePlayer(target)
+
+    -- Ask client for a new name right away
+    net.Start("ZEUS_Identity_RequestName")
+    net.Send(target)
+
+    return true
+end
+
 function Identity.CanPromoteCCtoCT(staffRank)
     return ZEUS.RankIsAboveSergeant(staffRank)
 end
@@ -469,6 +492,21 @@ local function registerSAMCommands()
                 ply:ChatPrint("[ZEUS] " .. (err or "Failed to set CT."))
             else
                 ply:ChatPrint("[ZEUS] Set player to CT.")
+            end
+        end)
+    :End()
+
+    command.new("zeus_reset_name")
+        :SetPermission("zeus_reset_name", "admin")
+        :AddArg("player", {single_target = true})
+        :Help("Reset a player's ZEUS name and prompt them to choose again.")
+        :OnExecute(function(ply, targets)
+            local target = targets[1]
+            local ok, err = Identity.ResetName(ply, target)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to reset name."))
+            else
+                ply:ChatPrint("[ZEUS] Reset player's name; they will be prompted to choose a new one.")
             end
         end)
     :End()
