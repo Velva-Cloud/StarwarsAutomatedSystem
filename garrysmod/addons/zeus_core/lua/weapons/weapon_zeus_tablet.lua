@@ -417,6 +417,9 @@ if CLIENT then
         panel:Dock(FILL)
         panel:DockMargin(5, 5, 5, 5)
 
+        -- Use client-side identity snapshot to know our own regiment
+        local clientRegiment = ZEUS.ClientIdentity and ZEUS.ClientIdentity.regiment or nil
+
         local list = vgui.Create("DListView", panel)
         list:Dock(FILL)
         list:AddColumn("Name")
@@ -499,7 +502,10 @@ if CLIENT then
             local p = getSelectedPlayerData()
             if not p or not ZEUS.Tablet.SendAction then return end
 
-            local myReg = LocalPlayer().zeusData and LocalPlayer().zeusData.regiment or nil
+            -- Prefer client-side snapshot of regiment (ZEUS identity), fallback to ply.zeusData
+            local myReg = (ZEUS.ClientIdentity and ZEUS.ClientIdentity.regiment)
+                or (LocalPlayer().zeusData and LocalPlayer().zeusData.regiment)
+                or nil
             if not myReg or myReg == "" then
                 LocalPlayer():ChatPrint("[ZEUS] You are not in a regiment; cannot request transfers.")
                 return
