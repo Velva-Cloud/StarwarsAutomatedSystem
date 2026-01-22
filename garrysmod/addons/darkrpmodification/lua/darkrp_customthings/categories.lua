@@ -47,3 +47,12 @@ DarkRP.createCategory{
     sortOrder = 40,
 }
 
+DarkRP.createCategory{
+    name = "High Command",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(180, 80, 180, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 5,
+}
+
