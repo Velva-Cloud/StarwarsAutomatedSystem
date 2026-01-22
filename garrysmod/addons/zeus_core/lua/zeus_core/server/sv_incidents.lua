@@ -273,15 +273,17 @@ end)
 
 timer.Create("ZEUS_Incidents_Tick", 30, 0, function()
     if not Incidents.ActiveIncident then return end
+
     for _, ply in ipairs(player.GetAll()) do
-        if not IsValid(ply) or not ply.zeusData then goto continue end
-        local sid = Util.SteamID(ply)
-        if not sid then goto continue end
-        addOrUpdateParticipant(ply)
-        local p = Incidents.Participants[sid]
-        if p then
-            p.time_present = (p.time_present or 0) + 30
+        if IsValid(ply) and ply.zeusData then
+            local sid = Util.SteamID(ply)
+            if sid then
+                addOrUpdateParticipant(ply)
+                local p = Incidents.Participants[sid]
+                if p then
+                    p.time_present = (p.time_present or 0) + 30
+                end
+            end
         end
-        ::continue::
     end
 end)
