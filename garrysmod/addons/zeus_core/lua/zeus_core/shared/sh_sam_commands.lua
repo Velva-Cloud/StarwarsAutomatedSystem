@@ -47,6 +47,7 @@ local function registerSAMCommands()
         :SetPermission("zeus_set_rank", "admin")
         :AddArg("player", {single_target = true})
         :AddArg("text", {hint = "rank"})
+        :GetRestArgs()
         :Help("Set a trooper's rank (must be below your own unless staff).")
         :OnExecute(function(ply, targets, newRank)
             if not ZEUS.Identity or not ZEUS.Identity.SetRank then return end

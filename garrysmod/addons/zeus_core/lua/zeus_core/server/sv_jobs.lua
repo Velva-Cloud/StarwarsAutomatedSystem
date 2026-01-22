@@ -18,7 +18,8 @@ end
 
 local function isXORank(rank)
     rank = normalizeRank(rank)
-    return rank == "EXECUTIVE OFFICER"
+    -- Accept both "Executive Officer" and "ExecutiveOfficer" variants
+    return rank == "EXECUTIVE OFFICER" or rank == "EXECUTIVEOFFICER"
 end
 
 local function isMajorRank(rank)
