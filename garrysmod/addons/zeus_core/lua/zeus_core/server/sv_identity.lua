@@ -214,8 +214,16 @@ function Identity.SetPreRegiment(staff, target, tag)
     end
 
     local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(staff)
-    if not isStaffOverride then
-        return false, "Only staff can directly set CC/CT."
+
+    -- Allow Major+ (and equivalent) to force CC/CT as well as staff.
+    local sRank = staff.zeusData and staff.zeusData.rank
+    local isHighOfficer = false
+    if ZEUS.RankIndex and sRank and ZEUS.RankIndex["Major"] and ZEUS.RankIndex[sRank] then
+        isHighOfficer = ZEUS.RankIndex[sRank] >= ZEUS.RankIndex["Major"]
+    end
+
+    if not isStaffOverride and not isHighOfficer then
+        return false, "Only staff or Major+ can directly set CC/CT."
     end
 
     target.zeusData = target.zeusData or {}
