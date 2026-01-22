@@ -254,25 +254,27 @@ if SERVER then
 
         sendIncidentData(ply, incidentId)
     end)
+end
 
-    function SWEP:PrimaryAttack()
-        local owner = self:GetOwner()
-        if not IsValid(owner) or not owner:IsPlayer() then return end
+-- Primary/Secondary attacks must be defined on both realms so SWEP prediction works,
+-- but the network request itself only runs on the server.
+function SWEP:PrimaryAttack()
+    if CLIENT then return end
 
-        local ok, err = canUseTablet(owner)
-        if not ok then
-            owner:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
-            return
-        end
+    local owner = self:GetOwner()
+    if not IsValid(owner) or not owner:IsPlayer() then return end
 
-        if SERVER then
-            net.Start("ZEUS_Tablet_RequestData")
-                net.WriteUInt(0, 16) -- no specific incident id, use latest
-            net.Send(owner)
-        end
+    local ok, err = canUseTablet(owner)
+    if not ok then
+        owner:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
+        return
     end
 
-    function SWEP:SecondaryAttack()
-        self:PrimaryAttack()
-    end
+    net.Start("ZEUS_Tablet_RequestData")
+        net.WriteUInt(0, 16) -- no specific incident id, use latest
+    net.Send(owner)
+end
+
+function SWEP:SecondaryAttack()
+    self:PrimaryAttack()
 end
