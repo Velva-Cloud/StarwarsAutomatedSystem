@@ -287,7 +287,8 @@ if CLIENT then
             okBtn:SetText("Apply")
 
             okBtn.DoClick = function()
-                local newRank = combo:GetSelected() and combo:GetSelected():GetValue()
+                -- DComboBox:GetValue() returns the current text; safer than relying on GetSelected()
+                local newRank = combo:GetValue()
                 if not newRank or newRank == "" or newRank == "Select rank" then return end
                 if ZEUS.Tablet.SendAction then
                     ZEUS.Tablet.SendAction("set_rank", p.steamid, newRank)
