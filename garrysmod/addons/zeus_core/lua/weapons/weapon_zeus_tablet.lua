@@ -238,6 +238,16 @@ if CLIENT then
         buttonBar:SetTall(40)
         buttonBar:DockMargin(0, 5, 0, 0)
 
+        local promoteBtn = vgui.Create("DButton", buttonBar)
+        promoteBtn:Dock(LEFT)
+        promoteBtn:SetWide(80)
+        promoteBtn:SetText("Promote")
+
+        local demoteBtn = vgui.Create("DButton", buttonBar)
+        demoteBtn:Dock(LEFT)
+        demoteBtn:SetWide(80)
+        demoteBtn:SetText("Demote")
+
         local setRankBtn = vgui.Create("DButton", buttonBar)
         setRankBtn:Dock(LEFT)
         setRankBtn:SetWide(120)
@@ -251,6 +261,18 @@ if CLIENT then
         local function getSelectedPlayerData()
             local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
             return line and line.PlayerData or nil
+        end
+
+        promoteBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("promote_step", p.steamid, "")
+        end
+
+        demoteBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("demote_step", p.steamid, "")
         end
 
         setRankBtn.DoClick = function()
@@ -397,6 +419,16 @@ if SERVER then
     util.AddNetworkString("ZEUS_Tablet_IncidentData")
     util.AddNetworkString("ZEUS_Tablet_Action")
 
+    local function getRankByIndex(idx)
+        if not ZEUS or not ZEUS.RankIndex then return nil end
+        for name, i in pairs(ZEUS.RankIndex) do
+            if i == idx then
+                return name
+            end
+        end
+        return nil
+    end
+
     local function sendIncidentData(ply, incidentId)
         if not ZEUS.Incidents or not sql then
             print("[ZEUS Tablet] sendIncidentData: ZEUS.Incidents or sql not available")
@@ -523,31 +555,62 @@ if SERVER then
             return
         end
 
+        local function applyRankChange(newRank, fromAction)
+            if newRank == "" or not ZEUS.Identity.SetRank then return end
+            local ok, err = ZEUS.Identity.SetRank(ply, target, newRank)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to set rank."))
+                return
+            end
+
+            -- 2nd LT–CPT promoting above SGT should be logged for approval
+            local pRank = ply.zeusData and ply.zeusData.rank or ""
+            local tRank = target.zeusData and target.zeusData.rank or newRank
+
+            local upperP = string.upper(pRank or "")
+            local upperT = string.upper(tRank or "")
+
+            local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
+            local aboveSGT = upperT ~= "SGT" and upperT ~= "SSG" and upperT ~= "MSG" and upperT ~= "SGM"
+            local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
+
+            if isMidOfficer and aboveSGT and not isStaffOverride then
+                print(string.format("[ZEUS] Promotion above SGT by %s (%s) via %s: set %s to %s (requires Major+ review)",
+                    pRank, ply:Nick(), fromAction or "tablet", target:Nick(), newRank))
+            end
+        end
+
         if action == "set_rank" then
             local newRank = payload
-            if newRank ~= "" and ZEUS.Identity.SetRank then
-                local ok, err = ZEUS.Identity.SetRank(ply, target, newRank)
-                if not ok then
-                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to set rank."))
-                    return
-                end
-
-                -- 2nd LT–CPT promoting above SGT should be logged for approval
-                local pRank = ply.zeusData and ply.zeusData.rank or ""
-                local tRank = target.zeusData and target.zeusData.rank or newRank
-
-                local upperP = string.upper(pRank or "")
-                local upperT = string.upper(tRank or "")
-
-                local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
-                local aboveSGT = upperT ~= "SGT" and upperT ~= "SSG" and upperT ~= "MSG" and upperT ~= "SGM"
-                local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
-
-                if isMidOfficer and aboveSGT and not isStaffOverride then
-                    print(string.format("[ZEUS] Promotion above SGT by %s (%s): set %s to %s (requires Major+ review)",
-                        pRank, ply:Nick(), target:Nick(), newRank))
-                end
+            applyRankChange(newRank, "set_rank")
+        elseif action == "promote_step" or action == "demote_step" then
+            if not ZEUS.RankIndex then return end
+            local currentRank = target.zeusData and target.zeusData.rank or ""
+            local idx = ZEUS.RankIndex[currentRank]
+            if not idx then
+                ply:ChatPrint("[ZEUS] Target has no valid rank to step from.")
+                return
             end
+
+            local newIndex = idx
+            if action == "promote_step" then
+                newIndex = idx + 1
+            else
+                newIndex = idx - 1
+            end
+
+            if newIndex <= 0 then
+                ply:ChatPrint("[ZEUS] Cannot demote below lowest rank.")
+                return
+            end
+
+            local newRank = getRankByIndex(newIndex)
+            if not newRank then
+                ply:ChatPrint("[ZEUS] No rank defined at that level.")
+                return
+            end
+
+            applyRankChange(newRank, action)
         elseif action == "remove_regiment" then
             if ZEUS.Identity.SetPreRegiment and ZEUS.Config and ZEUS.Config.DefaultTrooperTag then
                 local ok, err = ZEUS.Identity.SetPreRegiment(ply, target, ZEUS.Config.DefaultTrooperTag)
