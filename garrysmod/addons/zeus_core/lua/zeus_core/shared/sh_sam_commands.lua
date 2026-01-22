@@ -152,6 +152,7 @@ local function registerSAMCommands()
         :SetPermission("zeus_incident_note", "admin")
         :AddArg("player", {single_target = true})
         :AddArg("text", {hint = "note"})
+        :GetRestArgs()
         :Help("Attach a performance note for a player in the current incident.")
         :OnExecute(function(ply, targets, note)
             if not ZEUS.Incidents or not ZEUS.Incidents.AddNote then return end
