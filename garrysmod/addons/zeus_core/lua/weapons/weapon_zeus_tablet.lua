@@ -49,6 +49,14 @@ if CLIENT then
     ZEUS = ZEUS or {}
     ZEUS.Tablet = ZEUS.Tablet or {}
 
+    local function sendTabletAction(action, steamid, payload)
+        net.Start("ZEUS_Tablet_Action")
+            net.WriteString(action or "")
+            net.WriteString(steamid or "")
+            net.WriteString(payload or "")
+        net.SendToServer()
+    end
+
     net.Receive("ZEUS_Tablet_IncidentData", function()
         local count = net.ReadUInt(8)
         local incidents = {}
@@ -106,6 +114,7 @@ if CLIENT then
         ZEUS.Tablet.Participants = participants
         ZEUS.Tablet.RegimentPlayers = regimentPlayers
         ZEUS.Tablet.Cadets = cadets
+        ZEUS.Tablet.SendAction = sendTabletAction
 
         -- Open / refresh tablet UI
         if ZEUS.Tablet.OpenUI then
@@ -224,6 +233,85 @@ if CLIENT then
             line.PlayerData = p
         end
 
+        local buttonBar = vgui.Create("DPanel", panel)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(40)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local setRankBtn = vgui.Create("DButton", buttonBar)
+        setRankBtn:Dock(LEFT)
+        setRankBtn:SetWide(120)
+        setRankBtn:SetText("Set Rank")
+
+        local removeBtn = vgui.Create("DButton", buttonBar)
+        removeBtn:Dock(LEFT)
+        removeBtn:SetWide(160)
+        removeBtn:SetText("Remove from Regiment")
+
+        local function getSelectedPlayerData()
+            local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
+            return line and line.PlayerData or nil
+        end
+
+        setRankBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p then return end
+
+            local ranks = {}
+            if ZEUS.RankIndex then
+                for r, idx in pairs(ZEUS.RankIndex) do
+                    table.insert(ranks, {name = r, idx = idx})
+                end
+                table.SortByMember(ranks, "idx", false)
+            end
+
+            local w = vgui.Create("DFrame")
+            w:SetTitle("Set Rank for " .. (p.name or p.steamid))
+            w:SetSize(300, 120)
+            w:Center()
+            w:MakePopup()
+
+            local combo = vgui.Create("DComboBox", w)
+            combo:Dock(TOP)
+            combo:DockMargin(10, 30, 10, 5)
+            combo:SetValue("Select rank")
+
+            for _, r in ipairs(ranks) do
+                combo:AddChoice(r.name)
+            end
+
+            local okBtn = vgui.Create("DButton", w)
+            okBtn:Dock(BOTTOM)
+            okBtn:DockMargin(10, 0, 10, 10)
+            okBtn:SetTall(25)
+            okBtn:SetText("Apply")
+
+            okBtn.DoClick = function()
+                local newRank = combo:GetSelected() and combo:GetSelected():GetValue()
+                if not newRank or newRank == "" or newRank == "Select rank" then return end
+                if ZEUS.Tablet.SendAction then
+                    ZEUS.Tablet.SendAction("set_rank", p.steamid, newRank)
+                end
+                w:Close()
+            end
+        end
+
+        removeBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p then return end
+
+            Derma_Query(
+                "Remove " .. (p.name or p.steamid) .. " from regiment (set to CT)?",
+                "Confirm Removal",
+                "Yes", function()
+                    if ZEUS.Tablet.SendAction then
+                        ZEUS.Tablet.SendAction("remove_regiment", p.steamid, "")
+                    end
+                end,
+                "No"
+            )
+        end
+
         return panel
     end
 
@@ -238,7 +326,32 @@ if CLIENT then
         list:AddColumn("SteamID")
 
         for _, c in ipairs(cadets) do
-            list:AddLine(c.name or c.steamid, c.steamid or "")
+            local line = list:AddLine(c.name or c.steamid, c.steamid or "")
+            line.CadetData = c
+        end
+
+        local buttonBar = vgui.Create("DPanel", panel)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(40)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local promoteBtn = vgui.Create("DButton", buttonBar)
+        promoteBtn:Dock(LEFT)
+        promoteBtn:SetWide(200)
+        promoteBtn:SetText("Approve & Promote to CT")
+
+        local function getSelectedCadet()
+            local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
+            return line and line.CadetData or nil
+        end
+
+        promoteBtn.DoClick = function()
+            local c = getSelectedCadet()
+            if not c then return end
+
+            if ZEUS.Tablet.SendAction then
+                ZEUS.Tablet.SendAction("promote_cc_to_ct", c.steamid, "")
+            end
         end
 
         return panel
@@ -281,6 +394,7 @@ end
 
 if SERVER then
     util.AddNetworkString("ZEUS_Tablet_IncidentData")
+    util.AddNetworkString("ZEUS_Tablet_Action")
 
     local function sendIncidentData(ply, incidentId)
         if not ZEUS.Incidents or not sql then
@@ -395,6 +509,61 @@ if SERVER then
         net.Send(ply)
     end
 
+    net.Receive("ZEUS_Tablet_Action", function(_, ply)
+        if not ZEUS or not ZEUS.Identity then return end
+        local action = net.ReadString() or ""
+        local steamid = net.ReadString() or ""
+        local payload = net.ReadString() or ""
+
+        local target = player.GetBySteamID(steamid)
+        if not IsValid(target) then return end
+
+        if not canUseTablet(ply) then
+            return
+        end
+
+        if action == "set_rank" then
+            local newRank = payload
+            if newRank ~= "" and ZEUS.Identity.SetRank then
+                local ok, err = ZEUS.Identity.SetRank(ply, target, newRank)
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to set rank."))
+                    return
+                end
+
+                -- 2nd LT–CPT promoting above SGT should be logged for approval
+                local pRank = ply.zeusData and ply.zeusData.rank or ""
+                local tRank = target.zeusData and target.zeusData.rank or newRank
+
+                local upperP = string.upper(pRank or "")
+                local upperT = string.upper(tRank or "")
+
+                local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
+                local aboveSGT = upperT ~= "SGT" and upperT ~= "SSG" and upperT ~= "MSG" and upperT ~= "SGM"
+                local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
+
+                if isMidOfficer and aboveSGT and not isStaffOverride then
+                    print(string.format("[ZEUS] Promotion above SGT by %s (%s): set %s to %s (requires Major+ review)",
+                        pRank, ply:Nick(), target:Nick(), newRank))
+                end
+            end
+        elseif action == "remove_regiment" then
+            if ZEUS.Identity.SetPreRegiment and ZEUS.Config and ZEUS.Config.DefaultTrooperTag then
+                local ok, err = ZEUS.Identity.SetPreRegiment(ply, target, ZEUS.Config.DefaultTrooperTag)
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to remove from regiment."))
+                end
+            end
+        elseif action == "promote_cc_to_ct" then
+            if ZEUS.Identity.PromoteCCtoCT then
+                local ok, err = ZEUS.Identity.PromoteCCtoCT(ply, target)
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to promote Cadet to CT."))
+                end
+            end
+        end
+    end)
+
     -- Primary/Secondary attacks must be defined on both realms so SWEP prediction works,
     -- but the incident data is sent directly from the server here.
     function SWEP:PrimaryAttack()
@@ -412,7 +581,7 @@ if SERVER then
             return
         end
 
-        -- Send latest incident data directly to the owner
+        -- Send latest incident and roster data directly to the owner
         sendIncidentData(owner, nil)
     end
 end
