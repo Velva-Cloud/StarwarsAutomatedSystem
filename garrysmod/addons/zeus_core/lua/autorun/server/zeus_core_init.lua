@@ -15,6 +15,7 @@ if SERVER then
     include("zeus_core/server/sv_xp.lua")
     include("zeus_core/server/sv_zeus_presence.lua")
     include("zeus_core/server/sv_incidents.lua")
+    include("zeus_core/server/sv_jobs.lua")
 else
     include("zeus_core/config/sh_regiments.lua")
     include("zeus_core/config/sh_zeus_config.lua")
