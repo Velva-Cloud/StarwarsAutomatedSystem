@@ -76,10 +76,36 @@ if CLIENT then
             }
         end
 
-        print(string.format("[ZEUS Tablet] Received %d incidents and %d participants", count, participantCount))
+        -- Regiment players
+        local regCount = net.ReadUInt(8)
+        local regimentPlayers = {}
+        for i = 1, regCount do
+            regimentPlayers[i] = {
+                steamid = net.ReadString(),
+                name = net.ReadString(),
+                regiment = net.ReadString(),
+                rank = net.ReadString(),
+                rankIndex = net.ReadUInt(16),
+            }
+        end
+
+        -- Cadets (CC)
+        local cadetCount = net.ReadUInt(8)
+        local cadets = {}
+        for i = 1, cadetCount do
+            cadets[i] = {
+                steamid = net.ReadString(),
+                name = net.ReadString(),
+            }
+        end
+
+        print(string.format("[ZEUS Tablet] Received %d incidents, %d participants, %d regiment players, %d cadets",
+            count, participantCount, regCount, cadetCount))
 
         ZEUS.Tablet.Incidents = incidents
         ZEUS.Tablet.Participants = participants
+        ZEUS.Tablet.RegimentPlayers = regimentPlayers
+        ZEUS.Tablet.Cadets = cadets
 
         -- Open / refresh tablet UI
         if ZEUS.Tablet.OpenUI then
@@ -90,25 +116,15 @@ if CLIENT then
         end
     end)
 
-    function ZEUS.Tablet.OpenUI()
-        local incidents = ZEUS.Tablet.Incidents or {}
-        local participants = ZEUS.Tablet.Participants or {}
+    local function buildIncidentPanel(parent, incidents, participants)
+        local panel = vgui.Create("DPanel", parent)
+        panel:Dock(FILL)
+        panel:DockMargin(5, 5, 5, 5)
 
-        if IsValid(ZEUS.Tablet.Frame) then
-            ZEUS.Tablet.Frame:Remove()
-        end
-
-        local frame = vgui.Create("DFrame")
-        frame:SetTitle("ZEUS Incident Tablet")
-        frame:SetSize(900, 500)
-        frame:Center()
-        frame:MakePopup()
-        ZEUS.Tablet.Frame = frame
-
-        local left = vgui.Create("DPanel", frame)
+        local left = vgui.Create("DPanel", panel)
         left:Dock(LEFT)
         left:SetWide(250)
-        left:DockMargin(5, 5, 5, 5)
+        left:DockMargin(0, 0, 5, 0)
 
         local incidentList = vgui.Create("DListView", left)
         incidentList:Dock(FILL)
@@ -125,9 +141,8 @@ if CLIENT then
             incidentList:AddLine(inc.id, inc.name, mins .. " min")
         end
 
-        local right = vgui.Create("DPanel", frame)
+        local right = vgui.Create("DPanel", panel)
         right:Dock(FILL)
-        right:DockMargin(5, 5, 5, 5)
 
         local participantList = vgui.Create("DListView", right)
         participantList:Dock(LEFT)
@@ -186,6 +201,81 @@ if CLIENT then
             )
             notesBox:SetValue(text)
         end
+
+        return panel
+    end
+
+    local function buildRegimentPanel(parent, regimentPlayers)
+        local panel = vgui.Create("DPanel", parent)
+        panel:Dock(FILL)
+        panel:DockMargin(5, 5, 5, 5)
+
+        local list = vgui.Create("DListView", panel)
+        list:Dock(FILL)
+        list:AddColumn("Name")
+        list:AddColumn("Regiment")
+        list:AddColumn("Rank")
+
+        -- sort by rankIndex descending (highest rank first)
+        table.SortByMember(regimentPlayers, "rankIndex", true)
+
+        for _, p in ipairs(regimentPlayers) do
+            local line = list:AddLine(p.name or p.steamid, p.regiment or "", p.rank or "")
+            line.PlayerData = p
+        end
+
+        return panel
+    end
+
+    local function buildBasicTrainingPanel(parent, cadets)
+        local panel = vgui.Create("DPanel", parent)
+        panel:Dock(FILL)
+        panel:DockMargin(5, 5, 5, 5)
+
+        local list = vgui.Create("DListView", panel)
+        list:Dock(FILL)
+        list:AddColumn("Name")
+        list:AddColumn("SteamID")
+
+        for _, c in ipairs(cadets) do
+            list:AddLine(c.name or c.steamid, c.steamid or "")
+        end
+
+        return panel
+    end
+
+    function ZEUS.Tablet.OpenUI()
+        local incidents       = ZEUS.Tablet.Incidents or {}
+        local participants    = ZEUS.Tablet.Participants or {}
+        local regimentPlayers = ZEUS.Tablet.RegimentPlayers or {}
+        local cadets          = ZEUS.Tablet.Cadets or {}
+
+        if IsValid(ZEUS.Tablet.Frame) then
+            ZEUS.Tablet.Frame:Remove()
+        end
+
+        local frame = vgui.Create("DFrame")
+        frame:SetTitle("ZEUS Command Tablet")
+        frame:SetSize(1000, 550)
+        frame:Center()
+        frame:MakePopup()
+        ZEUS.Tablet.Frame = frame
+
+        local sheet = vgui.Create("DPropertySheet", frame)
+        sheet:Dock(FILL)
+        sheet:DockMargin(5, 5, 5, 5)
+
+        -- Incident Reports tab
+        local incidentPanel = buildIncidentPanel(sheet, incidents, participants)
+        sheet:AddSheet("Incident Reports", incidentPanel, "icon16/report.png")
+
+        -- Regiment tab (read-only for now)
+        local regPanel = buildRegimentPanel(sheet, regimentPlayers)
+        sheet:AddSheet("Regiment", regPanel, "icon16/group.png")
+
+        -- Basic Training tab (read-only list of cadets for now)
+        local basicPanel = buildBasicTrainingPanel(sheet, cadets)
+        sheet:AddSheet("Basic Training", basicPanel, "icon16/user_add.png")
     end
 end
 
@@ -243,6 +333,64 @@ if SERVER then
                 net.WriteInt(tonumber(p.deaths) or 0, 16)
                 net.WriteString(p.notes or "")
             end
+
+            -- Regiment players: filtered by caller's regiment / permissions
+            local regimentPlayers = {}
+            for _, rp in ipairs(player.GetAll()) do
+                if not rp.zeusData then goto continue end
+
+                local rd = rp.zeusData
+                local reg = rd.regiment or ""
+                local rank = rd.rank or ""
+
+                -- Staff and high command can see all; others only their own regiment
+                local canSeeAll = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
+                if ZEUS.Config and ZEUS.Config.HighCommandRanks and rd.rank and ZEUS.Config.HighCommandRanks[rd.rank] then
+                    canSeeAll = true
+                end
+
+                local sameReg = (ply.zeusData and ply.zeusData.regiment == reg)
+
+                if canSeeAll or sameReg then
+                    table.insert(regimentPlayers, {
+                        steamid = rp:SteamID(),
+                        name = rp:Nick(),
+                        regiment = reg,
+                        rank = rank,
+                        rankIndex = (ZEUS.RankIndex and ZEUS.RankIndex[rank]) or 0,
+                    })
+                end
+
+                ::continue::
+            end
+
+            net.WriteUInt(#regimentPlayers, 8)
+            for _, rp in ipairs(regimentPlayers) do
+                net.WriteString(rp.steamid or "")
+                net.WriteString(rp.name or "")
+                net.WriteString(rp.regiment or "")
+                net.WriteString(rp.rank or "")
+                net.WriteUInt(rp.rankIndex or 0, 16)
+            end
+
+            -- Cadets (CC) for Basic Training view
+            local cadets = {}
+            local cadetTag = ZEUS.Config and ZEUS.Config.DefaultCadetTag or "CC"
+
+            for _, cp in ipairs(player.GetAll()) do
+                if cp.zeusData and cp.zeusData.regiment == cadetTag then
+                    table.insert(cadets, {
+                        steamid = cp:SteamID(),
+                        name = cp:Nick(),
+                    })
+                end
+            end
+
+            net.WriteUInt(#cadets, 8)
+            for _, c in ipairs(cadets) do
+                net.WriteString(c.steamid or "")
+                net.WriteString(c.name or "")
+            end
         net.Send(ply)
     end
 
@@ -266,10 +414,6 @@ if SERVER then
         -- Send latest incident data directly to the owner
         sendIncidentData(owner, nil)
     end
-end
-
-function SWEP:SecondaryAttack()
-    self:PrimaryAttack()
 end
 
 function SWEP:SecondaryAttack()
