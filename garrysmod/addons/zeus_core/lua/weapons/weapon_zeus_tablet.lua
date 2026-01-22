@@ -555,6 +555,17 @@ if SERVER then
             return
         end
 
+        -- Prevent players from changing their own rank or regiment via the tablet
+        -- unless they are staff (SAM override). Self-management should go through
+        -- proper staff tools, not the field tablet.
+        local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
+        local isSelfTarget = (ply == target)
+
+        if isSelfTarget and not isStaffOverride and (action == "set_rank" or action == "promote_step" or action == "demote_step" or action == "remove_regiment") then
+            ply:ChatPrint("[ZEUS] You cannot change your own rank or regiment via the tablet.")
+            return
+        end
+
         local function applyRankChange(newRank, fromAction)
             if newRank == "" or not ZEUS.Identity.SetRank then return end
             local ok, err = ZEUS.Identity.SetRank(ply, target, newRank)
