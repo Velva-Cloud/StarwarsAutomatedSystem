@@ -107,13 +107,44 @@ if CLIENT then
             }
         end
 
-        print(string.format("[ZEUS Tablet] Received %d incidents, %d participants, %d regiment players, %d cadets",
-            count, participantCount, regCount, cadetCount))
+        -- All players snapshot for Troopers tab
+        local allCount = net.ReadUInt(8)
+        local allPlayers = {}
+        for i = 1, allCount do
+            allPlayers[i] = {
+                steamid = net.ReadString(),
+                name = net.ReadString(),
+                regiment = net.ReadString(),
+                rank = net.ReadString(),
+            }
+        end
+
+        -- Pending approvals snapshot
+        local apprCount = net.ReadUInt(8)
+        local approvals = {}
+        for i = 1, apprCount do
+            approvals[i] = {
+                id = tonumber(net.ReadString()) or 0,
+                type = net.ReadString(),
+                target_steamid = net.ReadString(),
+                target_name = net.ReadString(),
+                from_regiment = net.ReadString(),
+                to_regiment = net.ReadString(),
+                requested_by_steamid = net.ReadString(),
+                requested_by_name = net.ReadString(),
+                created_at = tonumber(net.ReadString()) or 0,
+            }
+        end
+
+        print(string.format("[ZEUS Tablet] Received %d incidents, %d participants, %d regiment players, %d cadets, %d troopers, %d approvals",
+            count, participantCount, regCount, cadetCount, allCount, apprCount))
 
         ZEUS.Tablet.Incidents = incidents
         ZEUS.Tablet.Participants = participants
         ZEUS.Tablet.RegimentPlayers = regimentPlayers
         ZEUS.Tablet.Cadets = cadets
+        ZEUS.Tablet.AllPlayers = allPlayers
+        ZEUS.Tablet.Approvals = approvals
         ZEUS.Tablet.SendAction = sendTabletAction
 
         -- Open / refresh tablet UI
@@ -380,11 +411,158 @@ if CLIENT then
         return panel
     end
 
+    -- Troopers tab: all online players for CT add + transfer requests
+    local function buildTroopersPanel(parent, regimentPlayers, allPlayers)
+        local panel = vgui.Create("DPanel", parent)
+        panel:Dock(FILL)
+        panel:DockMargin(5, 5, 5, 5)
+
+        local list = vgui.Create("DListView", panel)
+        list:Dock(FILL)
+        list:AddColumn("Name")
+        list:AddColumn("Regiment")
+        list:AddColumn("Rank")
+
+        -- allPlayers comes from server: everyone online
+        for _, p in ipairs(allPlayers or {}) do
+            local line = list:AddLine(p.name or p.steamid, p.regiment or "", p.rank or "")
+            line.PlayerData = p
+        end
+
+        local buttonBar = vgui.Create("DPanel", panel)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(40)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local addBtn = vgui.Create("DButton", buttonBar)
+        addBtn:Dock(LEFT)
+        addBtn:SetWide(150)
+        addBtn:SetText("Add CT to Regiment")
+
+        local transferBtn = vgui.Create("DButton", buttonBar)
+        transferBtn:Dock(LEFT)
+        transferBtn:SetWide(200)
+        transferBtn:SetText("Request Transfer to My Regiment")
+
+        local function getSelectedPlayerData()
+            local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
+            return line and line.PlayerData or nil
+        end
+
+        addBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+            if (p.regiment or "") ~= (ZEUS.Config and ZEUS.Config.DefaultTrooperTag or "CT") then
+                LocalPlayer():ChatPrint("[ZEUS] Only CTs can be directly added with this button.")
+                return
+            end
+
+            -- Rank selection dialog for CT -> your regiment
+            local ranks = {}
+            if ZEUS.RankIndex then
+                for r, idx in pairs(ZEUS.RankIndex) do
+                    table.insert(ranks, {name = r, idx = idx})
+                end
+                table.SortByMember(ranks, "idx", false)
+            end
+
+            local w = vgui.Create("DFrame")
+            w:SetTitle("Add CT " .. (p.name or p.steamid) .. " to your regiment")
+            w:SetSize(320, 120)
+            w:Center()
+            w:MakePopup()
+
+            local combo = vgui.Create("DComboBox", w)
+            combo:Dock(TOP)
+            combo:DockMargin(10, 30, 10, 5)
+            combo:SetValue("Select starting rank")
+
+            for _, r in ipairs(ranks) do
+                combo:AddChoice(r.name)
+            end
+
+            local okBtn = vgui.Create("DButton", w)
+            okBtn:Dock(BOTTOM)
+            okBtn:DockMargin(10, 0, 10, 10)
+            okBtn:SetTall(25)
+            okBtn:SetText("Add")
+
+            okBtn.DoClick = function()
+                local rankName = combo:GetValue()
+                if not rankName or rankName == "" or rankName == "Select starting rank" then return end
+                ZEUS.Tablet.SendAction("add_ct_to_regiment", p.steamid, rankName)
+                w:Close()
+            end
+        end
+
+        transferBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+
+            local myReg = LocalPlayer().zeusData and LocalPlayer().zeusData.regiment or nil
+            if not myReg or myReg == "" then
+                LocalPlayer():ChatPrint("[ZEUS] You are not in a regiment; cannot request transfers.")
+                return
+            end
+
+            if p.regiment == myReg then
+                LocalPlayer():ChatPrint("[ZEUS] Trooper is already in your regiment.")
+                return
+            end
+
+            if (p.regiment or "") == (ZEUS.Config and ZEUS.Config.DefaultTrooperTag or "CT") then
+                LocalPlayer():ChatPrint("[ZEUS] Use 'Add CT to Regiment' for CTs.")
+                return
+            end
+
+            -- Rank selection for transfer
+            local ranks = {}
+            if ZEUS.RankIndex then
+                for r, idx in pairs(ZEUS.RankIndex) do
+                    table.insert(ranks, {name = r, idx = idx})
+                end
+                table.SortByMember(ranks, "idx", false)
+            end
+
+            local w = vgui.Create("DFrame")
+            w:SetTitle("Request transfer for " .. (p.name or p.steamid) .. " to " .. myReg)
+            w:SetSize(320, 120)
+            w:Center()
+            w:MakePopup()
+
+            local combo = vgui.Create("DComboBox", w)
+            combo:Dock(TOP)
+            combo:DockMargin(10, 30, 10, 5)
+            combo:SetValue("Select rank in your regiment")
+
+            for _, r in ipairs(ranks) do
+                combo:AddChoice(r.name)
+            end
+
+            local okBtn = vgui.Create("DButton", w)
+            okBtn:Dock(BOTTOM)
+            okBtn:DockMargin(10, 0, 10, 10)
+            okBtn:SetTall(25)
+            okBtn:SetText("Request")
+
+            okBtn.DoClick = function()
+                local rankName = combo:GetValue()
+                if not rankName or rankName == "" or rankName == "Select rank in your regiment" then return end
+                ZEUS.Tablet.SendAction("request_transfer", p.steamid, rankName)
+                w:Close()
+            end
+        end
+
+        return panel
+    end
+
     function ZEUS.Tablet.OpenUI()
         local incidents       = ZEUS.Tablet.Incidents or {}
         local participants    = ZEUS.Tablet.Participants or {}
         local regimentPlayers = ZEUS.Tablet.RegimentPlayers or {}
         local cadets          = ZEUS.Tablet.Cadets or {}
+        local allPlayers      = ZEUS.Tablet.AllPlayers or {}
+        local approvals       = ZEUS.Tablet.Approvals or {}
 
         if IsValid(ZEUS.Tablet.Frame) then
             ZEUS.Tablet.Frame:Remove()
@@ -413,14 +591,70 @@ if CLIENT then
         local basicPanel = buildBasicTrainingPanel(sheet, cadets)
         sheet:AddSheet("Basic Training", basicPanel, "icon16/user_add.png")
 
-        -- Approvals tab (data wired later)
+        -- Troopers tab (all players)
+        local troopersPanel = buildTroopersPanel(sheet, regimentPlayers, allPlayers)
+        sheet:AddSheet("Troopers", troopersPanel, "icon16/user.png")
+
+        -- Approvals tab (list of pending approvals)
         local approvalsPanel = vgui.Create("DPanel", sheet)
         approvalsPanel:Dock(FILL)
         approvalsPanel:DockMargin(5, 5, 5, 5)
-        local lbl = vgui.Create("DLabel", approvalsPanel)
-        lbl:Dock(TOP)
-        lbl:SetText("Approvals overview will be implemented next (promotions, transfers, medals).")
-        lbl:DockMargin(5, 5, 5, 5)
+
+        local approvalsList = vgui.Create("DListView", approvalsPanel)
+        approvalsList:Dock(FILL)
+        approvalsList:AddColumn("ID")
+        approvalsList:AddColumn("Type")
+        approvalsList:AddColumn("Target")
+        approvalsList:AddColumn("From")
+        approvalsList:AddColumn("To")
+        approvalsList:AddColumn("Requested By")
+        approvalsList:AddColumn("When")
+
+        for _, row in ipairs(approvals) do
+            local line = approvalsList:AddLine(
+                row.id or "",
+                row.type or "",
+                row.target_name or row.target_steamid or "",
+                row.from_regiment or "",
+                row.to_regiment or "",
+                row.requested_by_name or row.requested_by_steamid or "",
+                os.date("%H:%M", tonumber(row.created_at) or 0)
+            )
+            line.ApprovalData = row
+        end
+
+        local buttonBar = vgui.Create("DPanel", approvalsPanel)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(40)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local approveBtn = vgui.Create("DButton", buttonBar)
+        approveBtn:Dock(LEFT)
+        approveBtn:SetWide(100)
+        approveBtn:SetText("Approve")
+
+        local denyBtn = vgui.Create("DButton", buttonBar)
+        denyBtn:Dock(LEFT)
+        denyBtn:SetWide(100)
+        denyBtn:SetText("Deny")
+
+        local function getSelectedApproval()
+            local line = approvalsList:GetSelectedLine() and approvalsList:GetLine(approvalsList:GetSelectedLine())
+            return line and line.ApprovalData or nil
+        end
+
+        approveBtn.DoClick = function()
+            local row = getSelectedApproval()
+            if not row or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("resolve_approval", tostring(row.id or ""), "approve")
+        end
+
+        denyBtn.DoClick = function()
+            local row = getSelectedApproval()
+            if not row or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("resolve_approval", tostring(row.id or ""), "deny")
+        end
+
         sheet:AddSheet("Approvals", approvalsPanel, "icon16/tick.png")
     end
 end
@@ -535,8 +769,22 @@ if SERVER then
             local cadets = {}
             local cadetTag = ZEUS.Config and ZEUS.Config.DefaultCadetTag or "CC"
 
+            -- All players snapshot for Troopers tab
+            local allPlayers = {}
+
             for _, cp in ipairs(player.GetAll()) do
-                if cp.zeusData and cp.zeusData.regiment == cadetTag then
+                cp.zeusData = cp.zeusData or {}
+                local reg = cp.zeusData.regiment or ""
+                local rank = cp.zeusData.rank or ""
+
+                table.insert(allPlayers, {
+                    steamid = cp:SteamID(),
+                    name = cp:Nick(),
+                    regiment = reg,
+                    rank = rank,
+                })
+
+                if reg == cadetTag then
                     table.insert(cadets, {
                         steamid = cp:SteamID(),
                         name = cp:Nick(),
@@ -548,6 +796,41 @@ if SERVER then
             for _, c in ipairs(cadets) do
                 net.WriteString(c.steamid or "")
                 net.WriteString(c.name or "")
+            end
+
+            net.WriteUInt(#allPlayers, 8)
+            for _, ap in ipairs(allPlayers) do
+                net.WriteString(ap.steamid or "")
+                net.WriteString(ap.name or "")
+                net.WriteString(ap.regiment or "")
+                net.WriteString(ap.rank or "")
+            end
+
+            -- Pending approvals snapshot
+            local approvals = ZEUS.Approvals and ZEUS.Approvals.GetPending and ZEUS.Approvals.GetPending() or {}
+            net.WriteUInt(#approvals, 8)
+            for _, row in ipairs(approvals) do
+                local targetName = row.target_steamid
+                local targetPly = player.GetBySteamID(row.target_steamid or "")
+                if IsValid(targetPly) then
+                    targetName = targetPly:Nick()
+                end
+
+                local reqName = row.requested_by_steamid
+                local reqPly = player.GetBySteamID(row.requested_by_steamid or "")
+                if IsValid(reqPly) then
+                    reqName = reqPly:Nick()
+                end
+
+                net.WriteString(tostring(row.id or "0"))
+                net.WriteString(row.type or "")
+                net.WriteString(row.target_steamid or "")
+                net.WriteString(targetName or "")
+                net.WriteString(row.from_regiment or "")
+                net.WriteString(row.to_regiment or "")
+                net.WriteString(row.requested_by_steamid or "")
+                net.WriteString(reqName or "")
+                net.WriteString(tostring(row.created_at or "0"))
             end
         net.Send(ply)
     end
@@ -645,6 +928,65 @@ if SERVER then
                 if not ok then
                     ply:ChatPrint("[ZEUS] " .. (err or "Failed to promote Cadet to CT."))
                 end
+            end
+        elseif action == "add_ct_to_regiment" then
+            -- Directly assign CTs to the caller's regiment with chosen starting rank
+            if not ply.zeusData or not ply.zeusData.regiment or ply.zeusData.regiment == "" then
+                ply:ChatPrint("[ZEUS] You must be in a regiment to add CTs.")
+                return
+            end
+            if not target.zeusData or target.zeusData.regiment ~= (ZEUS.Config and ZEUS.Config.DefaultTrooperTag or "CT") then
+                ply:ChatPrint("[ZEUS] Target is not a CT.")
+                return
+            end
+            if ZEUS.Identity.AssignToRegiment then
+                local ok, err = ZEUS.Identity.AssignToRegiment(ply, target, ply.zeusData.regiment, payload ~= "" and payload or "PVT")
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to add CT to regiment."))
+                end
+            end
+        elseif action == "request_transfer" then
+            if not ply.zeusData or not ply.zeusData.regiment or ply.zeusData.regiment == "" then
+                ply:ChatPrint("[ZEUS] You must be in a regiment to request transfers.")
+                return
+            end
+            if not target.zeusData or target.zeusData.regiment == "" then
+                ply:ChatPrint("[ZEUS] Target has no regiment.")
+                return
+            end
+            if target.zeusData.regiment == (ZEUS.Config and ZEUS.Config.DefaultTrooperTag or "CT") then
+                ply:ChatPrint("[ZEUS] Use CT add for unassigned troopers.")
+                return
+            end
+            if target.zeusData.regiment == ply.zeusData.regiment then
+                ply:ChatPrint("[ZEUS] Trooper is already in your regiment.")
+                return
+            end
+
+            if ZEUS.Approvals and ZEUS.Approvals.CreateTransfer then
+                local ok, err = ZEUS.Approvals.CreateTransfer(ply, target, ply.zeusData.regiment)
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to create transfer request."))
+                else
+                    ply:ChatPrint("[ZEUS] Transfer request submitted for approval by " .. (target.zeusData.regiment or "origin") .. " Major+.")
+                end
+            end
+        elseif action == "resolve_approval" then
+            if not ZEUS.Approvals or not ZEUS.Approvals.Resolve then return end
+            local idStr = steamid
+            local decision = payload
+            local id = tonumber(idStr)
+            if not id then
+                ply:ChatPrint("[ZEUS] Invalid approval id.")
+                return
+            end
+
+            local accept = (decision == "approve")
+            local ok, err = ZEUS.Approvals.Resolve(ply, id, accept)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to resolve approval."))
+            else
+                ply:ChatPrint("[ZEUS] Approval " .. id .. " " .. (accept and "approved." or "denied."))
             end
         end
     end)
