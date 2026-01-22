@@ -317,10 +317,15 @@ function Identity.AssignToRegiment(staff, target, regimentKey, startingRank)
     target.zeusData.regiment = regimentKey
     target.zeusData.rank = startingRank or "PVT"
 
-    -- Update DarkRP job to match regiment if possible
-    local teamID = getTeamForRegiment(regimentKey)
-    if teamID then
-        safeChangeTeam(target, teamID)
+    -- Let ZEUS job system handle the exact job based on regiment+rank
+    if ZEUS.Jobs and ZEUS.Jobs.ApplyJob then
+        ZEUS.Jobs.ApplyJob(target)
+    else
+        -- Fallback: basic team per regiment
+        local teamID = getTeamForRegiment(regimentKey)
+        if teamID then
+            safeChangeTeam(target, teamID)
+        end
     end
 
     Identity.ApplyRPName(target)
@@ -342,6 +347,11 @@ function Identity.SetRank(staff, target, newRank)
 
     target.zeusData = target.zeusData or {}
     target.zeusData.rank = newRank
+
+    -- Immediately update job to match new rank/regiment
+    if ZEUS.Jobs and ZEUS.Jobs.ApplyJob then
+        ZEUS.Jobs.ApplyJob(target)
+    end
 
     Identity.ApplyRPName(target)
     Identity.SyncToClient(target)

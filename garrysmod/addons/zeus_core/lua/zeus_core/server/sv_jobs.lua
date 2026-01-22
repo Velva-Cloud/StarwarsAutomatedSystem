@@ -18,48 +18,30 @@ end
 
 local function isXORank(rank)
     rank = normalizeRank(rank)
-    return rank == "EXECUTIVE OFFICER" or rank == "XO"
+    return rank == "EXECUTIVE OFFICER"
 end
 
 local function isMajorRank(rank)
     rank = normalizeRank(rank)
-    return string.find(rank, "MAJ", 1, true) ~= nil
+    return rank == "MAJOR"
 end
 
 local function isOfficerRank(rank)
     rank = normalizeRank(rank)
-    if isCommanderRank(rank) or isXORank(rank) or isMajorRank(rank) then return true end
-
-    local officerKeywords = {
-        "LT",   -- 2nd LT, 1st LT, etc
-        "CPT",
-        "LTC",
-        "COL",
-    }
-
-    for _, kw in ipairs(officerKeywords) do
-        if string.find(rank, kw, 1, true) then
-            return true
-        end
-    end
-
-    return false
+    -- Officer = CPT, 1st LT, 2nd LT
+    return rank == "CPT" or rank == "1ST LT" or rank == "2ND LT"
 end
 
 local function isNCORank(rank)
     rank = normalizeRank(rank)
-    local ncoKeywords = {
-        "SGT", "SSG", "SGM",
-        "CPL", "LCPL",
-    }
+    -- NCO = SGM, MSG, SSG, SGT
+    return rank == "SGM" or rank == "MSG" or rank == "SSG" or rank == "SGT"
+end
 
-    for _, kw in ipairs(ncoKeywords) do
-        if string.find(rank, kw, 1, true) then
-            return true
-        end
-    end
-
-    return false
+local function isTrooperRank(rank)
+    rank = normalizeRank(rank)
+    -- Trooper = CPL, LCPL, PFC, PVT
+    return rank == "CPL" or rank == "LCPL" or rank == "PFC" or rank == "PVT"
 end
 
 -- Resolve DarkRP team for a given ZEUS regiment+rank -------------------------
@@ -82,30 +64,33 @@ function Jobs.GetTeamForIdentity(ply)
     -- 501st
     if regiment == "501st" then
         if isCommanderRank(rank) and TEAM_501_CMD then return TEAM_501_CMD end
-        if isXORank(rank) and TEAM_501_XO then return TEAM_501_XO end
-        if isMajorRank(rank) and TEAM_501_MAJOR then return TEAM_501_MAJOR end
-        if isOfficerRank(rank) and TEAM_501_OFFICER then return TEAM_501_OFFICER end
-        if isNCORank(rank) and TEAM_501_NCO then return TEAM_501_NCO end
+        if isXORank(rank)       and TEAM_501_XO then return TEAM_501_XO end
+        if isMajorRank(rank)    and TEAM_501_MAJOR then return TEAM_501_MAJOR end
+        if isOfficerRank(rank)  and TEAM_501_OFFICER then return TEAM_501_OFFICER end
+        if isNCORank(rank)      and TEAM_501_NCO then return TEAM_501_NCO end
+        if isTrooperRank(rank) and TEAM_501ST then return TEAM_501ST end
         if TEAM_501ST then return TEAM_501ST end
     end
 
     -- 212th
     if regiment == "212th" then
         if isCommanderRank(rank) and TEAM_212_CMD then return TEAM_212_CMD end
-        if isXORank(rank) and TEAM_212_XO then return TEAM_212_XO end
-        if isMajorRank(rank) and TEAM_212_MAJOR then return TEAM_212_MAJOR end
-        if isOfficerRank(rank) and TEAM_212_OFFICER then return TEAM_212_OFFICER end
-        if isNCORank(rank) and TEAM_212_NCO then return TEAM_212_NCO end
+        if isXORank(rank)       and TEAM_212_XO then return TEAM_212_XO end
+        if isMajorRank(rank)    and TEAM_212_MAJOR then return TEAM_212_MAJOR end
+        if isOfficerRank(rank)  and TEAM_212_OFFICER then return TEAM_212_OFFICER end
+        if isNCORank(rank)      and TEAM_212_NCO then return TEAM_212_NCO end
+        if isTrooperRank(rank) and TEAM_212TH then return TEAM_212TH end
         if TEAM_212TH then return TEAM_212TH end
     end
 
     -- Shock
     if regiment == "Shock" then
         if isCommanderRank(rank) and TEAM_SHOCK_CMD then return TEAM_SHOCK_CMD end
-        if isXORank(rank) and TEAM_SHOCK_XO then return TEAM_SHOCK_XO end
-        if isMajorRank(rank) and TEAM_SHOCK_MAJOR then return TEAM_SHOCK_MAJOR end
-        if isOfficerRank(rank) and TEAM_SHOCK_OFFICER then return TEAM_SHOCK_OFFICER end
-        if isNCORank(rank) and TEAM_SHOCK_NCO then return TEAM_SHOCK_NCO end
+        if isXORank(rank)       and TEAM_SHOCK_XO then return TEAM_SHOCK_XO end
+        if isMajorRank(rank)    and TEAM_SHOCK_MAJOR then return TEAM_SHOCK_MAJOR end
+        if isOfficerRank(rank)  and TEAM_SHOCK_OFFICER then return TEAM_SHOCK_OFFICER end
+        if isNCORank(rank)      and TEAM_SHOCK_NCO then return TEAM_SHOCK_NCO end
+        if isTrooperRank(rank) and TEAM_SHOCK then return TEAM_SHOCK end
         if TEAM_SHOCK then return TEAM_SHOCK end
     end
 
