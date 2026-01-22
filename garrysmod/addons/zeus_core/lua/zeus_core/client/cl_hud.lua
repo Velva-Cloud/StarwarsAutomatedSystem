@@ -7,6 +7,29 @@ local ClientIdentity = ZEUS.ClientIdentity
 local Presence = ZEUS.ZeusPresenceClient
 local Incident = ZEUS.IncidentClient
 
+local function formatClientName()
+    local d = ClientIdentity
+    if not d or not d.char_id then return "" end
+
+    local id = string.format("%04d", tonumber(d.char_id) or 0)
+    local regiment = d.regiment or ZEUS.Config.DefaultCadetTag or "CC"
+    local chosen = d.chosen_name
+    if not chosen or chosen == "" then
+        chosen = "Clone"
+    end
+
+    if regiment == ZEUS.Config.DefaultCadetTag or regiment == ZEUS.Config.DefaultTrooperTag then
+        return string.format("%s %s %s", regiment, id, chosen)
+    end
+
+    local rank = d.rank
+    if not rank or rank == "" then
+        rank = "PVT"
+    end
+
+    return string.format("%s %s %s %s", regiment, id, rank, chosen)
+end
+
 net.Receive("ZEUS_Presence_Status", function()
     Presence.active = net.ReadBool()
 end)
@@ -37,7 +60,8 @@ hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
     end
 
     -- Player identity, XP, and incident (bottom left)
-    local name = LocalPlayer().ZEUSFormattedName and LocalPlayer():ZEUSFormattedName() or ""
+    -- Use client-side identity snapshot rather than calling into server-side methods
+    local name = formatClientName()
     local xp = ClientIdentity.xp or 0
 
     if name ~= "" then
