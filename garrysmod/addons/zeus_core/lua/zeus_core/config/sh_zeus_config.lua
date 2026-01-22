@@ -37,5 +37,11 @@ ZEUS.Config.BannedNames = {
 ZEUS.Config.XPPerMinute = 10
 ZEUS.Config.XPPerKill = 5
 
+-- High command ranks (can see all regiments in incident tools)
+ZEUS.Config.HighCommandRanks = {
+    ["Executive Officer"] = true,
+    ["Commander"] = true,
+}
+
 -- Scoreboard settings
 ZEUS.Config.ScoreboardTitle = "ZEUS Operations"
