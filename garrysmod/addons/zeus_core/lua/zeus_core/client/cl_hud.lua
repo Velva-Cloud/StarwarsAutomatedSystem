@@ -42,6 +42,12 @@ end)
 hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
     local scrW, scrH = ScrW(), ScrH()
 
+    -- Debug marker so we can see that the ZEUS HUD is active at all
+    surface.SetFont("Trebuchet18")
+    surface.SetTextColor(255, 255, 0, 200)
+    surface.SetTextPos(20, 20)
+    surface.DrawText("[ZEUS HUD]")
+
     -- ZEUS presence banner (top center)
     if Presence.active then
         local text = "The server is being watched by ZEUS"
@@ -60,8 +66,10 @@ hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
     end
 
     -- Player identity, XP, and incident (bottom left)
-    -- Use client-side identity snapshot rather than calling into server-side methods
-    local name = formatClientName()
+    local ok, name = pcall(formatClientName)
+    if not ok then
+        name = ""
+    end
     local xp = ClientIdentity.xp or 0
 
     if name ~= "" then
