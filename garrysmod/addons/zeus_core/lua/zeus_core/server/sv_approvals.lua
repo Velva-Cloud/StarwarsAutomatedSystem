@@ -46,6 +46,12 @@ local function isHighOfficer(ply)
     return rankIndex(r) >= ZEUS.RankIndex["Major"]
 end
 
+local function sameRegiment(a, b)
+    a = string.Trim(string.lower(a or ""))
+    b = string.Trim(string.lower(b or ""))
+    return a ~= "" and a == b
+end
+
 function Approvals.CreateTransfer(staff, target, toRegiment, newRank)
     ensureTable()
     if not IsValid(staff) or not IsValid(target) then
@@ -143,12 +149,12 @@ function Approvals.CanResolve(ply, row)
 
     if row.type == "transfer" then
         -- Require Major+ in the FROM regiment to approve/deny transfers
-        if plyReg == row.from_regiment and isHighOfficer(ply) then
+        if sameRegiment(plyReg, row.from_regiment) and isHighOfficer(ply) then
             return true
         end
     elseif row.type == "promotion" then
         -- Require Major+ in the same regiment as the target to approve promotions
-        if plyReg == row.from_regiment and isHighOfficer(ply) then
+        if sameRegiment(plyReg, row.from_regiment) and isHighOfficer(ply) then
             return true
         end
     end
