@@ -392,7 +392,7 @@ if CLIENT then
 
         local frame = vgui.Create("DFrame")
         frame:SetTitle("ZEUS Command Tablet")
-        frame:SetSize(1000, 550)
+        frame:SetSize(1100, 580)
         frame:Center()
         frame:MakePopup()
         ZEUS.Tablet.Frame = frame
@@ -405,13 +405,23 @@ if CLIENT then
         local incidentPanel = buildIncidentPanel(sheet, incidents, participants)
         sheet:AddSheet("Incident Reports", incidentPanel, "icon16/report.png")
 
-        -- Regiment tab (read-only for now)
+        -- Regiment tab
         local regPanel = buildRegimentPanel(sheet, regimentPlayers)
         sheet:AddSheet("Regiment", regPanel, "icon16/group.png")
 
-        -- Basic Training tab (read-only list of cadets for now)
+        -- Basic Training tab
         local basicPanel = buildBasicTrainingPanel(sheet, cadets)
         sheet:AddSheet("Basic Training", basicPanel, "icon16/user_add.png")
+
+        -- Approvals tab (data wired later)
+        local approvalsPanel = vgui.Create("DPanel", sheet)
+        approvalsPanel:Dock(FILL)
+        approvalsPanel:DockMargin(5, 5, 5, 5)
+        local lbl = vgui.Create("DLabel", approvalsPanel)
+        lbl:Dock(TOP)
+        lbl:SetText("Approvals overview will be implemented next (promotions, transfers, medals).")
+        lbl:DockMargin(5, 5, 5, 5)
+        sheet:AddSheet("Approvals", approvalsPanel, "icon16/tick.png")
     end
 end
 
