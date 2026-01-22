@@ -867,26 +867,28 @@ if SERVER then
 
         local function applyRankChange(newRank, fromAction)
             if newRank == "" or not ZEUS.Identity.SetRank then return end
+
+            -- Extra guard: 2nd LT–CPT cannot promote above SGT without Major+/staff approval.
+            local pRank = ply.zeusData and ply.zeusData.rank or ""
+            local upperP = string.upper(pRank or "")
+            local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
+            local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
+
+            if isMidOfficer and not isStaffOverride and ZEUS.RankIndex and ZEUS.RankIndex["SGT"] then
+                local newIdx = ZEUS.RankIndex[newRank] or 0
+                local sgtIdx = ZEUS.RankIndex["SGT"] or 0
+                if newIdx > sgtIdx then
+                    ply:ChatPrint("[ZEUS] Promotions above SGT must be approved by a Major+ or staff.")
+                    print(string.format("[ZEUS] BLOCKED promotion above SGT by %s (%s) via %s: attempted to set %s to %s",
+                        pRank, ply:Nick(), fromAction or "tablet", target:Nick(), newRank))
+                    return
+                end
+            end
+
             local ok, err = ZEUS.Identity.SetRank(ply, target, newRank)
             if not ok then
                 ply:ChatPrint("[ZEUS] " .. (err or "Failed to set rank."))
                 return
-            end
-
-            -- 2nd LT–CPT promoting above SGT should be logged for approval
-            local pRank = ply.zeusData and ply.zeusData.rank or ""
-            local tRank = target.zeusData and target.zeusData.rank or newRank
-
-            local upperP = string.upper(pRank or "")
-            local upperT = string.upper(tRank or "")
-
-            local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
-            local aboveSGT = upperT ~= "SGT" and upperT ~= "SSG" and upperT ~= "MSG" and upperT ~= "SGM"
-            local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
-
-            if isMidOfficer and aboveSGT and not isStaffOverride then
-                print(string.format("[ZEUS] Promotion above SGT by %s (%s) via %s: set %s to %s (requires Major+ review)",
-                    pRank, ply:Nick(), fromAction or "tablet", target:Nick(), newRank))
             end
         end
 
