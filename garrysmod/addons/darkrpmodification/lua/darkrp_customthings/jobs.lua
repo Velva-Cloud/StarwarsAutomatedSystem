@@ -25,10 +25,10 @@ High Command
 TEAM_SUPREMEMARSHAL = DarkRP.createJob("Supreme Marshal", {
     color = Color(120, 20, 120, 255),
     model = {
-        "models/nirrti/purgetroopers/purgetroopercommander.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrostaff.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrohammer.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrobaton.mdl",
+        "models/nada/purgetroopercommander.mdl",
+        "models/nada/purgetrooperelectrobaton.mdl",
+        "models/nada/purgetrooperelectrohammer.mdl",
+        "models/nada/purgetrooperelectrostaff.mdl",
     },
     description = [[Out-of-character highest staff position. Only the owner/superadmin may hold this job.]],
     weapons = {}, -- default weapons only
@@ -46,10 +46,10 @@ TEAM_SUPREMEMARSHAL = DarkRP.createJob("Supreme Marshal", {
 TEAM_MARSHAL = DarkRP.createJob("Marshal", {
     color = Color(150, 40, 150, 255),
     model = {
-        "models/nirrti/purgetroopers/purgetroopercommander.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrostaff.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrohammer.mdl",
-        "models/nirrti/purgetroopers/purgetrooperelectrobaton.mdl",
+        "models/nada/purgetroopercommander.mdl",
+        "models/nada/purgetrooperelectrobaton.mdl",
+        "models/nada/purgetrooperelectrohammer.mdl",
+        "models/nada/purgetrooperelectrostaff.mdl",
     },
     description = [[High staff leadership role for other superadmins.]],
     weapons = {}, -- default weapons only
