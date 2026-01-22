@@ -71,4 +71,4 @@ hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
             surface.DrawText(incidentText)
         end
     end
-end
+end)
