@@ -33,9 +33,16 @@ local function rankIndex(rank)
 end
 
 local function isHighOfficer(ply)
-    if not ply.zeusData or not ZEUS.RankIndex or not ZEUS.RankIndex["Major"] then return false end
+    ply.zeusData = ply.zeusData or {}
     local r = ply.zeusData.rank
     if not r then return false end
+
+    -- Treat configured HighCommand ranks as high officers
+    if ZEUS.Config and ZEUS.Config.HighCommandRanks and ZEUS.Config.HighCommandRanks[r] then
+        return true
+    end
+
+    if not ZEUS.RankIndex or not ZEUS.RankIndex["Major"] then return false end
     return rankIndex(r) >= ZEUS.RankIndex["Major"]
 end
 
