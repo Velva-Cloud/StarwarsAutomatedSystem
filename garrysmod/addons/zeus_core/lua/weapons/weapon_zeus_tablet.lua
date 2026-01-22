@@ -246,46 +246,30 @@ if SERVER then
         net.Send(ply)
     end
 
-    util.AddNetworkString("ZEUS_Tablet_RequestData")
+    -- Primary/Secondary attacks must be defined on both realms so SWEP prediction works,
+    -- but the incident data is sent directly from the server here.
+    function SWEP:PrimaryAttack()
+        if CLIENT then return end
 
-    net.Receive("ZEUS_Tablet_RequestData", function(_, ply)
-        local incidentId = net.ReadUInt(16)
-        if incidentId == 0 then
-            incidentId = nil
-        end
+        local owner = self:GetOwner()
+        if not IsValid(owner) or not owner:IsPlayer() then return end
 
-        local ok, err = canUseTablet(ply)
+        print("[ZEUS Tablet] PrimaryAttack by " .. tostring(owner))
+
+        local ok, err = canUseTablet(owner)
         if not ok then
-            ply:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
-            print("[ZEUS Tablet] canUseTablet failed for " .. tostring(ply) .. ": " .. tostring(err))
+            owner:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
+            print("[ZEUS Tablet] canUseTablet failed for " .. tostring(owner) .. ": " .. tostring(err))
             return
         end
 
-        print("[ZEUS Tablet] Request from " .. tostring(ply) .. " for incidentId=" .. tostring(incidentId or "latest"))
-        sendIncidentData(ply, incidentId)
-    end)
+        -- Send latest incident data directly to the owner
+        sendIncidentData(owner, nil)
+    end
 end
 
--- Primary/Secondary attacks must be defined on both realms so SWEP prediction works,
--- but the network request itself only runs on the server.
-function SWEP:PrimaryAttack()
-    if CLIENT then return end
-
-    local owner = self:GetOwner()
-    if not IsValid(owner) or not owner:IsPlayer() then return end
-
-    print("[ZEUS Tablet] PrimaryAttack by " .. tostring(owner))
-
-    local ok, err = canUseTablet(owner)
-    if not ok then
-        owner:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
-        print("[ZEUS Tablet] canUseTablet failed for " .. tostring(owner) .. ": " .. tostring(err))
-        return
-    end
-
-    net.Start("ZEUS_Tablet_RequestData")
-        net.WriteUInt(0, 16) -- no specific incident id, use latest
-    net.Send(owner)
+function SWEP:SecondaryAttack()
+    self:PrimaryAttack()
 end
 
 function SWEP:SecondaryAttack()
