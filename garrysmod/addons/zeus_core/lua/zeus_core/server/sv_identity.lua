@@ -367,6 +367,14 @@ function Identity.SyncToClient(ply)
     net.Send(ply)
 end
 
+-- Also send a full identity snapshot when the player actually spawns so
+-- the client HUD has data immediately rather than waiting for XP ticks.
+hook.Add("PlayerSpawn", "ZEUS_Identity_SyncOnSpawn", function(ply)
+    if ZEUS and ZEUS.Identity and ZEUS.Identity.SyncToClient then
+        ZEUS.Identity.SyncToClient(ply)
+    end
+end)
+
 -- On spawn, ensure RP name is enforced and if no chosen_name, ask client for it
 hook.Add("PlayerSpawn", "ZEUS_Identity_OnSpawn", function(ply)
     timer.Simple(2, function()

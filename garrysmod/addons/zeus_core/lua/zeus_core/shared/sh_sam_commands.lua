@@ -121,6 +121,7 @@ local function registerSAMCommands()
     command.new("zeus_incident_start")
         :SetPermission("zeus_incident_start", "admin")
         :AddArg("text", {hint = "incident name"})
+        :GetRestArgs()
         :Help("Start a ZEUS incident/operation with the given name.")
         :OnExecute(function(ply, name)
             if not ZEUS.Incidents or not ZEUS.Incidents.StartIncident then return end
