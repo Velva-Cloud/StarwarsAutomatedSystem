@@ -140,8 +140,8 @@ function Approvals.CanResolve(ply, row)
             return true
         end
     elseif row.type == "promotion" then
-        -- Allow any Major+ (high officer) to approve promotions across regiments
-        if isHighOfficer(ply) then
+        -- Require Major+ in the same regiment as the target to approve promotions
+        if plyReg == row.from_regiment and isHighOfficer(ply) then
             return true
         end
     end
