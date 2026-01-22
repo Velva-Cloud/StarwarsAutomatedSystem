@@ -337,7 +337,10 @@ if SERVER then
             -- Regiment players: filtered by caller's regiment / permissions
             local regimentPlayers = {}
             for _, rp in ipairs(player.GetAll()) do
-                if not rp.zeusData then goto continue end
+                if not rp.zeusData then
+                    -- Skip players without ZEUS data
+                    continue
+                end
 
                 local rd = rp.zeusData
                 local reg = rd.regiment or ""
@@ -360,8 +363,6 @@ if SERVER then
                         rankIndex = (ZEUS.RankIndex and ZEUS.RankIndex[rank]) or 0,
                     })
                 end
-
-                ::continue::
             end
 
             net.WriteUInt(#regimentPlayers, 8)
