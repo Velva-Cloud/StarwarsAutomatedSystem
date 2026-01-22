@@ -137,24 +137,37 @@ function Approvals.GetPending()
 end
 
 function Approvals.CanResolve(ply, row)
-    if not IsValid(ply) or not row then return false end
+    if not IsValid(ply) or not row then
+        print("[ZEUS Approvals] CanResolve: invalid ply or row")
+        return false
+    end
 
     -- Staff can always resolve
     if ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply) then
+        print(string.format("[ZEUS Approvals] CanResolve: %s is staff, allowed", ply:Nick()))
         return true
     end
 
     ply.zeusData = ply.zeusData or {}
     local plyReg = ply.zeusData.regiment or ""
+    local plyRank = ply.zeusData.rank or ""
+    local rowType = row.type or "?"
+    local fromReg = row.from_regiment or "?"
 
-    if row.type == "transfer" then
-        -- Require Major+ in the FROM regiment to approve/deny transfers
-        if sameRegiment(plyReg, row.from_regiment) and isHighOfficer(ply) then
+    if rowType == "transfer" then
+        local same = sameRegiment(plyReg, fromReg)
+        local high = isHighOfficer(ply)
+        print(string.format("[ZEUS Approvals] CanResolve transfer: ply=%s reg=%s rank=%s from=%s same=%s high=%s",
+            ply:Nick(), tostring(plyReg), tostring(plyRank), tostring(fromReg), tostring(same), tostring(high)))
+        if same and high then
             return true
         end
-    elseif row.type == "promotion" then
-        -- Require Major+ in the same regiment as the target to approve promotions
-        if sameRegiment(plyReg, row.from_regiment) and isHighOfficer(ply) then
+    elseif rowType == "promotion" then
+        local same = sameRegiment(plyReg, fromReg)
+        local high = isHighOfficer(ply)
+        print(string.format("[ZEUS Approvals] CanResolve promotion: ply=%s reg=%s rank=%s from=%s same=%s high=%s",
+            ply:Nick(), tostring(plyReg), tostring(plyRank), tostring(fromReg), tostring(same), tostring(high)))
+        if same and high then
             return true
         end
     end
@@ -165,19 +178,26 @@ end
 function Approvals.Resolve(ply, id, accept)
     ensureTable()
     id = tonumber(id)
-    if not id then return false, "Invalid approval id." end
+    if not id then
+        print("[ZEUS Approvals] Resolve: invalid id " .. tostring(id))
+        return false, "Invalid approval id."
+    end
 
     local rows = sql.Query("SELECT * FROM zeus_approvals WHERE id = " .. id .. " LIMIT 1")
     if not rows or not rows[1] then
+        print("[ZEUS Approvals] Resolve: id " .. id .. " not found")
         return false, "Approval not found."
     end
 
     local row = rows[1]
     if row.status ~= "pending" then
+        print(string.format("[ZEUS Approvals] Resolve: id %d already %s", id, tostring(row.status)))
         return false, "Approval already resolved."
     end
 
     if not Approvals.CanResolve(ply, row) then
+        print(string.format("[ZEUS Approvals] Resolve: %s NOT authorised for id %d (type=%s, from=%s)",
+            ply:Nick(), id, tostring(row.type), tostring(row.from_regiment)))
         return false, "You are not authorised to resolve this approval."
     end
 
