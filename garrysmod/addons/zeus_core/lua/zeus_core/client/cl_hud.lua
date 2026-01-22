@@ -42,12 +42,6 @@ end)
 hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
     local scrW, scrH = ScrW(), ScrH()
 
-    -- Debug marker so we can see that the ZEUS HUD is active at all
-    surface.SetFont("Trebuchet18")
-    surface.SetTextColor(255, 255, 0, 200)
-    surface.SetTextPos(20, 20)
-    surface.DrawText("[ZEUS HUD]")
-
     -- ZEUS presence banner (top center)
     if Presence.active then
         local text = "The server is being watched by ZEUS"
@@ -88,7 +82,9 @@ hook.Add("HUDPaint", "ZEUS_Identity_HUD", function()
         end
 
         local x = 20
-        local y = scrH - totalHeight - 20
+        -- Push the ZEUS identity HUD up a bit so it doesn't sit directly on top
+        -- of the default DarkRP HUD in the bottom left.
+        local y = scrH - totalHeight - 120
 
         surface.SetDrawColor(0, 0, 0, 180)
         surface.DrawRect(x - 8, y - 4, w + 16, totalHeight + 8)
