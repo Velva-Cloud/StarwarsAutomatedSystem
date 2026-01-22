@@ -193,7 +193,10 @@ if SERVER then
     util.AddNetworkString("ZEUS_Tablet_IncidentData")
 
     local function sendIncidentData(ply, incidentId)
-        if not ZEUS.Incidents or not sql then return end
+        if not ZEUS.Incidents or not sql then
+            print("[ZEUS Tablet] sendIncidentData: ZEUS.Incidents or sql not available")
+            return
+        end
 
         -- Determine which incidents to send (last 10)
         local incidents = sql.Query("SELECT id, name, started_at, ended_at FROM zeus_incidents ORDER BY id DESC LIMIT 10") or {}
@@ -254,9 +257,11 @@ if SERVER then
         local ok, err = canUseTablet(ply)
         if not ok then
             ply:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
+            print("[ZEUS Tablet] canUseTablet failed for " .. tostring(ply) .. ": " .. tostring(err))
             return
         end
 
+        print("[ZEUS Tablet] Request from " .. tostring(ply) .. " for incidentId=" .. tostring(incidentId or "latest"))
         sendIncidentData(ply, incidentId)
     end)
 end
@@ -269,9 +274,12 @@ function SWEP:PrimaryAttack()
     local owner = self:GetOwner()
     if not IsValid(owner) or not owner:IsPlayer() then return end
 
+    print("[ZEUS Tablet] PrimaryAttack by " .. tostring(owner))
+
     local ok, err = canUseTablet(owner)
     if not ok then
         owner:ChatPrint("[ZEUS] " .. (err or "You are not allowed to use the tablet."))
+        print("[ZEUS Tablet] canUseTablet failed for " .. tostring(owner) .. ": " .. tostring(err))
         return
     end
 
