@@ -76,12 +76,17 @@ if CLIENT then
             }
         end
 
+        print(string.format("[ZEUS Tablet] Received %d incidents and %d participants", count, participantCount))
+
         ZEUS.Tablet.Incidents = incidents
         ZEUS.Tablet.Participants = participants
 
         -- Open / refresh tablet UI
         if ZEUS.Tablet.OpenUI then
-            ZEUS.Tablet.OpenUI()
+            local ok, err = pcall(ZEUS.Tablet.OpenUI)
+            if not ok then
+                print("[ZEUS Tablet] Error opening UI: " .. tostring(err))
+            end
         end
     end)
 
