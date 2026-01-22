@@ -868,7 +868,7 @@ if SERVER then
         local function applyRankChange(newRank, fromAction)
             if newRank == "" or not ZEUS.Identity.SetRank then return end
 
-            -- Extra guard: 2nd LT–CPT cannot promote above SGT without Major+/staff approval.
+            -- Extra guard: 2nd LT–CPT promoting above SGT should go to approval, not apply immediately.
             local pRank = ply.zeusData and ply.zeusData.rank or ""
             local upperP = string.upper(pRank or "")
             local isMidOfficer = upperP == "2ND LT" or upperP == "1ST LT" or upperP == "CPT"
@@ -878,9 +878,18 @@ if SERVER then
                 local newIdx = ZEUS.RankIndex[newRank] or 0
                 local sgtIdx = ZEUS.RankIndex["SGT"] or 0
                 if newIdx > sgtIdx then
-                    ply:ChatPrint("[ZEUS] Promotions above SGT must be approved by a Major+ or staff.")
-                    print(string.format("[ZEUS] BLOCKED promotion above SGT by %s (%s) via %s: attempted to set %s to %s",
-                        pRank, ply:Nick(), fromAction or "tablet", target:Nick(), newRank))
+                    if ZEUS.Approvals and ZEUS.Approvals.CreatePromotion then
+                        local ok, err = ZEUS.Approvals.CreatePromotion(ply, target, newRank)
+                        if not ok then
+                            ply:ChatPrint("[ZEUS] " .. (err or "Failed to create promotion request."))
+                        else
+                            ply:ChatPrint("[ZEUS] Promotion request submitted for Major+ approval.")
+                            print(string.format("[ZEUS] Promotion request queued: %s (%s) wants %s promoted from %s to %s",
+                                pRank, ply:Nick(), target:Nick(), target.zeusData and target.zeusData.rank or "", newRank))
+                        end
+                    else
+                        ply:ChatPrint("[ZEUS] Promotions above SGT must be approved by a Major+ or staff.")
+                    end
                     return
                 end
             end
