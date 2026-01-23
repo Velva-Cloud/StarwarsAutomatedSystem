@@ -254,6 +254,30 @@ function Incidents.AddNote(staff, target, note)
     return true
 end
 
+-- Return up to 50 most recent incidents for a given steamid
+function Incidents.GetHistory(steamid)
+    ensureTables()
+    if not steamid or steamid == "" then return {} end
+
+    local rows = sql.Query(string.format([[
+        SELECT p.incident_id,
+               p.time_present,
+               p.kills,
+               p.deaths,
+               p.notes,
+               i.name       AS incident_name,
+               i.started_at AS started_at,
+               i.ended_at   AS ended_at
+        FROM zeus_incident_participants p
+        JOIN zeus_incidents i ON i.id = p.incident_id
+        WHERE p.steamid = %s
+        ORDER BY i.started_at DESC
+        LIMIT 50;
+    ]], sql.SQLStr(steamid))) or {}
+
+    return rows
+end
+
 -- Hooks to keep participants updated ---------------------------------------
 
 hook.Add("PlayerInitialSpawn", "ZEUS_Incidents_OnJoin", function(ply)

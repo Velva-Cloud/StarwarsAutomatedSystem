@@ -57,6 +57,55 @@ if CLIENT then
         net.SendToServer()
     end
 
+    net.Receive("ZEUS_Tablet_IncidentHistory", function()
+        local targetName = net.ReadString()
+        local count = net.ReadUInt(8)
+        local history = {}
+        for i = 1, count do
+            history[i] = {
+                incident_id   = net.ReadUInt(16),
+                incident_name = net.ReadString(),
+                started_at    = net.ReadInt(32),
+                ended_at      = net.ReadInt(32),
+                time_present  = net.ReadInt(32),
+                kills         = net.ReadInt(16),
+                deaths        = net.ReadInt(16),
+                notes         = net.ReadString(),
+            }
+        end
+
+        local frame = vgui.Create("DFrame")
+        frame:SetTitle("Incident History - " .. (targetName or ""))
+        frame:SetSize(700, 400)
+        frame:Center()
+        frame:MakePopup()
+
+        local list = vgui.Create("DListView", frame)
+        list:Dock(FILL)
+        list:AddColumn("Incident")
+        list:AddColumn("Duration")
+        list:AddColumn("Present")
+        list:AddColumn("K/D")
+        list:AddColumn("Notes")
+
+        for _, h in ipairs(history) do
+            local dur = 0
+            if h.started_at and h.ended_at and h.ended_at > h.started_at then
+                dur = h.ended_at - h.started_at
+            end
+            local minsTotal = math.floor(dur / 60)
+            local minsPresent = math.floor((h.time_present or 0) / 60)
+            local kd = (h.kills or 0) .. "/" .. (h.deaths or 0)
+            list:AddLine(
+                h.incident_name or ("#" .. tostring(h.incident_id)),
+                minsTotal .. "m",
+                minsPresent .. "m",
+                kd,
+                h.notes ~= "" and h.notes or "None"
+            )
+        end
+    end)
+
     net.Receive("ZEUS_Tablet_IncidentData", function()
         local count = net.ReadUInt(8)
         local incidents = {}
@@ -471,9 +520,6 @@ if CLIENT then
         panel:Dock(FILL)
         panel:DockMargin(5, 5, 5, 5)
 
-        -- Use client-side identity snapshot to know our own regiment
-        local clientRegiment = ZEUS.ClientIdentity and ZEUS.ClientIdentity.regiment or nil
-
         local list = vgui.Create("DListView", panel)
         list:Dock(FILL)
         list:AddColumn("Name")
@@ -484,6 +530,31 @@ if CLIENT then
         for _, p in ipairs(allPlayers or {}) do
             local line = list:AddLine(p.name or p.steamid, p.regiment or "", p.rank or "")
             line.PlayerData = p
+        end
+
+        local buttonBar = vgui.Create("DPanel", panel)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(40)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local addBtn = vgui.Create("DButton", buttonBar)
+        addBtn:Dock(LEFT)
+        addBtn:SetWide(150)
+        addBtn:SetText("Add CT to Regiment")
+
+        local transferBtn = vgui.Create("DButton", buttonBar)
+        transferBtn:Dock(LEFT)
+        transferBtn:SetWide(200)
+        transferBtn:SetText("Request Transfer to My Regiment")
+
+        local historyBtn = vgui.Create("DButton", buttonBar)
+        historyBtn:Dock(LEFT)
+        historyBtn:SetWide(160)
+        historyBtn:SetText("View Incident History")
+
+        local function getSelectedPlayerData()
+            local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
+            return line and line.PlayerData or nil
         end
 
         local buttonBar = vgui.Create("DPanel", panel)
@@ -613,6 +684,12 @@ if CLIENT then
             end
         end
 
+        historyBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("incident_history", p.steamid, "")
+        end
+
         return panel
     end
 
@@ -739,6 +816,7 @@ end
 if SERVER then
     util.AddNetworkString("ZEUS_Tablet_IncidentData")
     util.AddNetworkString("ZEUS_Tablet_Action")
+    util.AddNetworkString("ZEUS_Tablet_IncidentHistory")
 
     local function getRankByIndex(idx)
         if not ZEUS or not ZEUS.RankIndex then return nil end
@@ -1082,6 +1160,27 @@ if SERVER then
         elseif action == "refresh_all" then
             -- Re-send the latest tablet data snapshot to this player
             sendIncidentData(ply, nil)
+        elseif action == "incident_history" then
+            if not ZEUS.Incidents or not ZEUS.Incidents.GetHistory then return end
+            local sid = steamid
+            local history = ZEUS.Incidents.GetHistory(sid)
+            local target = player.GetBySteamID(sid)
+            local name = IsValid(target) and target:Nick() or sid
+
+            net.Start("ZEUS_Tablet_IncidentHistory")
+                net.WriteString(name or "")
+                net.WriteUInt(#history, 8)
+                for _, h in ipairs(history) do
+                    net.WriteUInt(tonumber(h.incident_id) or 0, 16)
+                    net.WriteString(h.incident_name or "")
+                    net.WriteInt(tonumber(h.started_at) or 0, 32)
+                    net.WriteInt(tonumber(h.ended_at) or 0, 32)
+                    net.WriteInt(tonumber(h.time_present) or 0, 32)
+                    net.WriteInt(tonumber(h.kills) or 0, 16)
+                    net.WriteInt(tonumber(h.deaths) or 0, 16)
+                    net.WriteString(h.notes or "")
+                end
+            net.Send(ply)
         end
     end)
 
