@@ -557,26 +557,6 @@ if CLIENT then
             return line and line.PlayerData or nil
         end
 
-        local buttonBar = vgui.Create("DPanel", panel)
-        buttonBar:Dock(BOTTOM)
-        buttonBar:SetTall(40)
-        buttonBar:DockMargin(0, 5, 0, 0)
-
-        local addBtn = vgui.Create("DButton", buttonBar)
-        addBtn:Dock(LEFT)
-        addBtn:SetWide(150)
-        addBtn:SetText("Add CT to Regiment")
-
-        local transferBtn = vgui.Create("DButton", buttonBar)
-        transferBtn:Dock(LEFT)
-        transferBtn:SetWide(200)
-        transferBtn:SetText("Request Transfer to My Regiment")
-
-        local function getSelectedPlayerData()
-            local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
-            return line and line.PlayerData or nil
-        end
-
         addBtn.DoClick = function()
             local p = getSelectedPlayerData()
             if not p or not ZEUS.Tablet.SendAction then return end
