@@ -635,6 +635,23 @@ if CLIENT then
         frame:MakePopup()
         ZEUS.Tablet.Frame = frame
 
+        -- Top bar with Refresh button
+        local topBar = vgui.Create("DPanel", frame)
+        topBar:Dock(TOP)
+        topBar:SetTall(30)
+        topBar:DockMargin(5, 5, 5, 0)
+
+        local refreshBtn = vgui.Create("DButton", topBar)
+        refreshBtn:Dock(RIGHT)
+        refreshBtn:SetWide(80)
+        refreshBtn:SetText("Refresh")
+
+        refreshBtn.DoClick = function()
+            if ZEUS.Tablet.SendAction then
+                ZEUS.Tablet.SendAction("refresh_all", "", "")
+            end
+        end
+
         local sheet = vgui.Create("DPropertySheet", frame)
         sheet:Dock(FILL)
         sheet:DockMargin(5, 5, 5, 5)
@@ -903,9 +920,9 @@ if SERVER then
 
         print(string.format("[ZEUS Tablet] Action '%s' from %s (id/payload=%s,%s)", action, IsValid(ply) and ply:Nick() or "?", tostring(steamid), tostring(payload)))
 
-        -- For most actions we gate on canUseTablet (officer+/staff). For approvals,
-        -- we rely on the approvals permission logic instead, so don't hard-block here.
-        if action ~= "resolve_approval" and not canUseTablet(ply) then
+        -- For most actions we gate on canUseTablet (officer+/staff). For approvals and
+        -- refresh_all we rely on more specific logic instead.
+        if action ~= "resolve_approval" and action ~= "refresh_all" and not canUseTablet(ply) then
             print(string.format("[ZEUS Tablet] canUseTablet denied '%s' from %s", action, IsValid(ply) and ply:Nick() or "?"))
             return
         end
@@ -1038,7 +1055,7 @@ if SERVER then
             end
 
             if ZEUS.Approvals and ZEUS.Approvals.CreateTransfer then
-                local ok, err = ZEUS.Approvals.CreateTransfer(ply, target, ply.zeusData.regiment)
+                local ok, err = ZEUS.Approvals.CreateTransfer(ply, target, ply.zeusData.regiment, payload or "")
                 if not ok then
                     ply:ChatPrint("[ZEUS] " .. (err or "Failed to create transfer request."))
                 else
@@ -1062,6 +1079,9 @@ if SERVER then
             else
                 ply:ChatPrint("[ZEUS] Approval " .. id .. " " .. (accept and "approved." or "denied."))
             end
+        elseif action == "refresh_all" then
+            -- Re-send the latest tablet data snapshot to this player
+            sendIncidentData(ply, nil)
         end
     end)
 
