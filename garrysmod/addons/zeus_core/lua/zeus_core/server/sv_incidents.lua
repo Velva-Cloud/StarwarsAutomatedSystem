@@ -190,10 +190,6 @@ function Incidents.EndIncident(staff)
 end
 
 function Incidents.AddNote(staff, target, note)
-    if not Incidents.ActiveIncident then
-        return false, "There is no active incident."
-    end
-
     if not IsValid(staff) or not IsValid(target) then
         return false, "Invalid player."
     end
@@ -206,16 +202,54 @@ function Incidents.AddNote(staff, target, note)
     local sid = Util.SteamID(target)
     if not sid then return false, "Target has no SteamID." end
 
-    addOrUpdateParticipant(target)
+    -- If there is an active incident, attach the note to the in-memory participant
+    -- (it will be flushed to DB when the incident ends). Otherwise, append to the
+    -- most recent incident_participants row for this trooper directly in the DB.
+    if Incidents.ActiveIncident then
+        addOrUpdateParticipant(target)
 
-    local p = Incidents.Participants[sid]
-    if not p then return false, "Participant not tracked." end
+        local p = Incidents.Participants[sid]
+        if not p then return false, "Participant not tracked." end
 
-    if p.notes == "" then
-        p.notes = note
-    else
-        p.notes = p.notes .. " | " .. note
+        if p.notes == "" then
+            p.notes = note
+        else
+            p.notes = p.notes .. " | " .. note
+        end
+
+        return true
     end
+
+    ensureTables()
+
+    local row = sql.QueryRow(string.format([[
+        SELECT id, notes
+        FROM zeus_incident_participants
+        WHERE steamid = %s
+        ORDER BY id DESC
+        LIMIT 1;
+    ]], sql.SQLStr(sid)))
+
+    if not row then
+        return false, "No previous incident record found for this trooper."
+    end
+
+    local existing = row.notes or ""
+    local combined
+    if existing == "" then
+        combined = note
+    else
+        combined = existing .. " | " .. note
+    end
+
+    sql.Query(string.format([[
+        UPDATE zeus_incident_participants
+        SET notes = %s
+        WHERE id = %d;
+    ]],
+        sql.SQLStr(combined),
+        tonumber(row.id) or 0
+    ))
 
     return true
 end
