@@ -185,15 +185,26 @@ if CLIENT then
         right:Dock(FILL)
 
         local participantList = vgui.Create("DListView", right)
-        participantList:Dock(LEFT)
+        participantList:Dock(FILL)
         participantList:SetWide(350)
         participantList:AddColumn("Name")
         participantList:AddColumn("Reg")
         participantList:AddColumn("Time")
         participantList:AddColumn("K/D")
 
+        local buttonBar = vgui.Create("DPanel", right)
+        buttonBar:Dock(BOTTOM)
+        buttonBar:SetTall(35)
+        buttonBar:DockMargin(0, 5, 0, 0)
+
+        local addNoteBtn = vgui.Create("DButton", buttonBar)
+        addNoteBtn:Dock(LEFT)
+        addNoteBtn:SetWide(140)
+        addNoteBtn:SetText("Add Note to Trooper")
+
         local detail = vgui.Create("DPanel", right)
-        detail:Dock(FILL)
+        detail:Dock(RIGHT)
+        detail:SetWide(350)
         detail:DockMargin(5, 0, 0, 0)
 
         local detailLabel = vgui.Create("DLabel", detail)
@@ -227,9 +238,12 @@ if CLIENT then
             populateParticipantsForIncident(id)
         end
 
-        participantList.OnRowSelected = function(_, _, line)
-            local p = line.ParticipantData
-            if not p then return end
+        local function refreshDetail(p)
+            if not p then
+                detailLabel:SetText("Select a participant to view details")
+                notesBox:SetValue("")
+                return
+            end
 
             detailLabel:SetText(string.format("%s [%s %s]", p.name or p.steamid, p.regiment or "?", p.rank or "?"))
             local mins = math.floor((p.time_present or 0) / 60)
@@ -240,6 +254,46 @@ if CLIENT then
                 p.notes ~= "" and p.notes or "None recorded."
             )
             notesBox:SetValue(text)
+        end
+
+        participantList.OnRowSelected = function(_, _, line)
+            local p = line.ParticipantData
+            if not p then return end
+            refreshDetail(p)
+        end
+
+        local function getSelectedParticipant()
+            local line = participantList:GetSelectedLine() and participantList:GetLine(participantList:GetSelectedLine())
+            return line and line.ParticipantData or nil
+        end
+
+        addNoteBtn.DoClick = function()
+            local p = getSelectedParticipant()
+            if not p or not ZEUS.Tablet.SendAction then return end
+
+            local w = vgui.Create("DFrame")
+            w:SetTitle("Add Note for " .. (p.name or p.steamid))
+            w:SetSize(400, 200)
+            w:Center()
+            w:MakePopup()
+
+            local entry = vgui.Create("DTextEntry", w)
+            entry:Dock(FILL)
+            entry:SetMultiline(true)
+            entry:DockMargin(10, 30, 10, 40)
+
+            local okBtn = vgui.Create("DButton", w)
+            okBtn:Dock(BOTTOM)
+            okBtn:SetTall(30)
+            okBtn:DockMargin(10, 0, 10, 10)
+            okBtn:SetText("Add Note")
+
+            okBtn.DoClick = function()
+                local note = string.Trim(entry:GetValue() or "")
+                if note == "" then return end
+                ZEUS.Tablet.SendAction("incident_add_note", p.steamid, note)
+                w:Close()
+            end
         end
 
         return panel
@@ -938,6 +992,15 @@ if SERVER then
                 local ok, err = ZEUS.Identity.PromoteCCtoCT(ply, target)
                 if not ok then
                     ply:ChatPrint("[ZEUS] " .. (err or "Failed to promote Cadet to CT."))
+                end
+            end
+        elseif action == "incident_add_note" then
+            if ZEUS.Incidents and ZEUS.Incidents.AddNote and IsValid(target) then
+                local ok, err = ZEUS.Incidents.AddNote(ply, target, payload or "")
+                if not ok and err then
+                    ply:ChatPrint("[ZEUS] " .. err)
+                else
+                    ply:ChatPrint("[ZEUS] Note added to trooper for this incident.")
                 end
             end
         elseif action == "add_ct_to_regiment" then
