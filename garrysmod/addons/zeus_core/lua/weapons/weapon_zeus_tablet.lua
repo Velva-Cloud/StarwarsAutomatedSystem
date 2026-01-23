@@ -847,25 +847,19 @@ if SERVER then
         local steamid = net.ReadString() or ""
         local payload = net.ReadString() or ""
 
+        print(string.format("[ZEUS Tablet] Action '%s' from %s (id/payload=%s,%s)", action, IsValid(ply) and ply:Nick() or "?", tostring(steamid), tostring(payload)))
+
+        -- For most actions we gate on canUseTablet (officer+/staff). For approvals,
+        -- we rely on the approvals permission logic instead, so don't hard-block here.
+        if action ~= "resolve_approval" and not canUseTablet(ply) then
+            print(string.format("[ZEUS Tablet] canUseTablet denied '%s' from %s", action, IsValid(ply) and ply:Nick() or "?"))
+            return
+        end
+
         local target = player.GetBySteamID(steamid)
-        if not IsValid(target) then return end
-
-        if not canUseTablet(ply) then
-            return
-        end
-
-        -- Prevent players from changing their own rank or regiment via the tablet
-        -- unless they are staff (SAM override). Self-management should go through
-        -- proper staff tools, not the field tablet.
-        local isStaffOverride = ZEUS.Util.IsStaff and ZEUS.Util.IsStaff(ply)
-        local isSelfTarget = (ply == target)
-
-        if isSelfTarget and not isStaffOverride and (action == "set_rank" or action == "promote_step" or action == "demote_step" or action == "remove_regiment") then
-            ply:ChatPrint("[ZEUS] You cannot change your own rank or regiment via the tablet.")
-            return
-        end
 
         local function applyRankChange(newRank, fromAction)
+            if not IsValid(target) then return end
             if newRank == "" or not ZEUS.Identity.SetRank then return end
 
             -- Extra guard: 2nd LT–CPT promoting above SGT should go to approval, not apply immediately.
