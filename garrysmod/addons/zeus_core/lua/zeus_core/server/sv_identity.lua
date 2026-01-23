@@ -123,6 +123,7 @@ end)
 function Identity.FormatNameData(data)
     local id = Util.FormatID(data.char_id)
 
+    -- Pre-regiments (CC/CT) do not show medals, only tag + ID + name
     if data.regiment == ZEUS.Config.DefaultCadetTag or data.regiment == ZEUS.Config.DefaultTrooperTag then
         return string.format("%s %s %s",
             data.regiment or "CC",
@@ -131,12 +132,30 @@ function Identity.FormatNameData(data)
         )
     end
 
-    return string.format("%s %s %s %s",
-        data.regiment or "CT",
-        id,
-        data.rank or "PVT",
-        data.chosen_name or "Clone"
-    )
+    -- Regimented troopers: [Regiment] [ID] [MEDALS...] [Rank] [Name]
+    local parts = {}
+
+    table.insert(parts, data.regiment or "CT")
+    table.insert(parts, id)
+
+    -- Insert up to 3 active medals between ID and rank
+    if ZEUS.Medal and ZEUS.Medal.GetActiveTags and data.steamid then
+        local tags = ZEUS.Medal.GetActiveTags(data.steamid) or {}
+        local count = 0
+        for _, tag in ipairs(tags) do
+            tag = string.Trim(tag or "")
+            if tag ~= "" then
+                count = count + 1
+                table.insert(parts, tag)
+                if count >= 3 then break end
+            end
+        end
+    end
+
+    table.insert(parts, data.rank or "PVT")
+    table.insert(parts, data.chosen_name or "Clone")
+
+    return table.concat(parts, " ")
 end
 
 function Identity.FormatName(ply)

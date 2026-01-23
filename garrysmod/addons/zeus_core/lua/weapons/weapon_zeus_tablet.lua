@@ -106,6 +106,78 @@ if CLIENT then
         end
     end)
 
+    net.Receive("ZEUS_Tablet_MedalConfig", function()
+        local targetSteamID = net.ReadString()
+        local targetName    = net.ReadString()
+        local count         = net.ReadUInt(8)
+        local medals        = {}
+
+        for i = 1, count do
+            medals[i] = {
+                id      = net.ReadUInt(16),
+                code    = net.ReadString(),
+                name    = net.ReadString(),
+                active  = net.ReadBool(),
+                reason  = net.ReadString(),
+                awarded = net.ReadInt(32),
+            }
+        end
+
+        local frame = vgui.Create("DFrame")
+        frame:SetTitle("Configure Medals - " .. (targetName or targetSteamID))
+        frame:SetSize(500, 350)
+        frame:Center()
+        frame:MakePopup()
+
+        local list = vgui.Create("DListView", frame)
+        list:Dock(FILL)
+        list:AddColumn("Code")
+        list:AddColumn("Name")
+        list:AddColumn("Active")
+        list:AddColumn("Reason")
+
+        list:SetMultiSelect(true)
+
+        for _, m in ipairs(medals) do
+            local activeText = m.active and "Yes" or "No"
+            local line = list:AddLine(m.code or "", m.name or "", activeText, m.reason or "")
+            line.MedalData = m
+            if m.active then
+                list:SelectItem(line)
+            end
+        end
+
+        local bottom = vgui.Create("DPanel", frame)
+        bottom:Dock(BOTTOM)
+        bottom:SetTall(40)
+        bottom:DockMargin(0, 5, 0, 0)
+
+        local saveBtn = vgui.Create("DButton", bottom)
+        saveBtn:Dock(RIGHT)
+        saveBtn:SetWide(120)
+        saveBtn:SetText("Save")
+
+        local infoLbl = vgui.Create("DLabel", bottom)
+        infoLbl:Dock(FILL)
+        infoLbl:DockMargin(5, 5, 5, 5)
+        infoLbl:SetText("Select up to 3 medals to show in the name.")
+
+        saveBtn.DoClick = function()
+            local selected = list:GetSelected()
+            local codes = {}
+            for i, line in ipairs(selected or {}) do
+                if i > 3 then break end
+                local m = line.MedalData
+                if m and m.code then
+                    table.insert(codes, m.code)
+                end
+            end
+            local payload = table.concat(codes, ",")
+            ZEUS.Tablet.SendAction("set_active_medals", targetSteamID, payload)
+            frame:Close()
+        end
+    end)
+
     net.Receive("ZEUS_Tablet_IncidentData", function()
         local count = net.ReadUInt(8)
         local incidents = {}
@@ -514,7 +586,7 @@ if CLIENT then
         return panel
     end
 
-    -- Troopers tab: all online players for CT add + transfer requests
+    -- Troopers tab: all online players for CT add + transfer requests + medals & history
     local function buildTroopersPanel(parent, regimentPlayers, allPlayers)
         local panel = vgui.Create("DPanel", parent)
         panel:Dock(FILL)
@@ -539,18 +611,28 @@ if CLIENT then
 
         local addBtn = vgui.Create("DButton", buttonBar)
         addBtn:Dock(LEFT)
-        addBtn:SetWide(150)
+        addBtn:SetWide(140)
         addBtn:SetText("Add CT to Regiment")
 
         local transferBtn = vgui.Create("DButton", buttonBar)
         transferBtn:Dock(LEFT)
-        transferBtn:SetWide(200)
-        transferBtn:SetText("Request Transfer to My Regiment")
+        transferBtn:SetWide(180)
+        transferBtn:SetText("Request Transfer")
 
         local historyBtn = vgui.Create("DButton", buttonBar)
         historyBtn:Dock(LEFT)
-        historyBtn:SetWide(160)
-        historyBtn:SetText("View Incident History")
+        historyBtn:SetWide(150)
+        historyBtn:SetText("Incident History")
+
+        local awardMedalBtn = vgui.Create("DButton", buttonBar)
+        awardMedalBtn:Dock(LEFT)
+        awardMedalBtn:SetWide(120)
+        awardMedalBtn:SetText("Award Medal")
+
+        local configureMedalsBtn = vgui.Create("DButton", buttonBar)
+        configureMedalsBtn:Dock(LEFT)
+        configureMedalsBtn:SetWide(140)
+        configureMedalsBtn:SetText("Configure Medals")
 
         local function getSelectedPlayerData()
             local line = list:GetSelectedLine() and list:GetLine(list:GetSelectedLine())
@@ -668,6 +750,54 @@ if CLIENT then
             local p = getSelectedPlayerData()
             if not p or not ZEUS.Tablet.SendAction then return end
             ZEUS.Tablet.SendAction("incident_history", p.steamid, "")
+        end
+
+        awardMedalBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+
+            local w = vgui.Create("DFrame")
+            w:SetTitle("Award Medal to " .. (p.name or p.steamid))
+            w:SetSize(350, 180)
+            w:Center()
+            w:MakePopup()
+
+            local combo = vgui.Create("DComboBox", w)
+            combo:Dock(TOP)
+            combo:DockMargin(10, 30, 10, 5)
+            combo:SetValue("Select medal")
+            combo:AddChoice("MOD - Medal of Honour", "MOD")
+            combo:AddChoice("COG - Cross of Glory", "COG")
+            combo:AddChoice("MOS - Medallion of Service", "MOS")
+
+            local reasonEntry = vgui.Create("DTextEntry", w)
+            reasonEntry:Dock(TOP)
+            reasonEntry:DockMargin(10, 5, 10, 5)
+            reasonEntry:SetPlaceholderText("Reason (optional)")
+
+            local okBtn = vgui.Create("DButton", w)
+            okBtn:Dock(BOTTOM)
+            okBtn:SetTall(28)
+            okBtn:DockMargin(10, 0, 10, 10)
+            okBtn:SetText("Award")
+
+            okBtn.DoClick = function()
+                local _, val = combo:GetSelected()
+                local code = val or combo:GetValue()
+                code = string.upper(string.Trim(code or ""))
+                if code ~= "MOD" and code ~= "COG" and code ~= "MOS" then return end
+
+                local reason = reasonEntry:GetValue() or ""
+                local payload = code .. "|" .. reason
+                ZEUS.Tablet.SendAction("award_medal", p.steamid, payload)
+                w:Close()
+            end
+        end
+
+        configureMedalsBtn.DoClick = function()
+            local p = getSelectedPlayerData()
+            if not p or not ZEUS.Tablet.SendAction then return end
+            ZEUS.Tablet.SendAction("request_medal_config", p.steamid, "")
         end
 
         return panel
@@ -797,6 +927,7 @@ if SERVER then
     util.AddNetworkString("ZEUS_Tablet_IncidentData")
     util.AddNetworkString("ZEUS_Tablet_Action")
     util.AddNetworkString("ZEUS_Tablet_IncidentHistory")
+    util.AddNetworkString("ZEUS_Tablet_MedalConfig")
 
     local function getRankByIndex(idx)
         if not ZEUS or not ZEUS.RankIndex then return nil end
@@ -1161,6 +1292,57 @@ if SERVER then
                     net.WriteString(h.notes or "")
                 end
             net.Send(ply)
+        elseif action == "award_medal" then
+            if not ZEUS.Medal or not ZEUS.Medal.Award then return end
+            local code, reason = string.match(payload or "", "([^|]*)|(.*)")
+            code = code or payload or ""
+            reason = reason or ""
+            if IsValid(target) then
+                local ok, err = ZEUS.Medal.Award(ply, target, code, reason)
+                if not ok then
+                    ply:ChatPrint("[ZEUS] " .. (err or "Failed to award medal."))
+                else
+                    ply:ChatPrint("[ZEUS] Medal " .. code .. " awarded to " .. target:Nick() .. ".")
+                end
+            end
+        elseif action == "request_medal_config" then
+            if not ZEUS.Medal or not ZEUS.Medal.GetAll then return end
+            local sid = steamid
+            local medals = ZEUS.Medal.GetAll(sid)
+            local target = player.GetBySteamID(sid)
+            local name = IsValid(target) and target:Nick() or sid
+
+            net.Start("ZEUS_Tablet_MedalConfig")
+                net.WriteString(sid or "")
+                net.WriteString(name or "")
+                net.WriteUInt(#medals, 8)
+                for _, m in ipairs(medals) do
+                    local def = ZEUS.Medals and ZEUS.Medals[m.code or ""] or nil
+                    net.WriteUInt(tonumber(m.id) or 0, 16)
+                    net.WriteString(m.code or "")
+                    net.WriteString(def and def.name or m.code or "")
+                    net.WriteBool(tobool(m.active))
+                    net.WriteString(m.reason or "")
+                    net.WriteInt(tonumber(m.awarded_at) or 0, 32)
+                end
+            net.Send(ply)
+        elseif action == "set_active_medals" then
+            if not ZEUS.Medal or not ZEUS.Medal.SetActive then return end
+            local sid = steamid
+            local codes = {}
+            for token in string.gmatch(payload or "", "([^,]+)") do
+                table.insert(codes, token)
+            end
+            local ok, err = ZEUS.Medal.SetActive(ply, sid, codes)
+            if not ok then
+                ply:ChatPrint("[ZEUS] " .. (err or "Failed to update active medals."))
+            else
+                ply:ChatPrint("[ZEUS] Active medals updated.")
+                local target = player.GetBySteamID(sid)
+                if IsValid(target) and ZEUS.Identity and ZEUS.Identity.ApplyRPName then
+                    ZEUS.Identity.ApplyRPName(target)
+                end
+            end
         end
     end)
 

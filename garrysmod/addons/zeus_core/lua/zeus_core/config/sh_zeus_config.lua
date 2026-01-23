@@ -37,10 +37,17 @@ ZEUS.Config.BannedNames = {
 ZEUS.Config.XPPerMinute = 10
 ZEUS.Config.XPPerKill = 5
 
--- High command ranks (can see all regiments in incident tools)
+-- High command ranks (can see all regiments in incident tools, award COG, approve high-level actions)
 ZEUS.Config.HighCommandRanks = {
     ["Executive Officer"] = true,
     ["Commander"] = true,
+}
+
+-- Global medals configuration (placeholders, used by backend + UI)
+ZEUS.Medals = {
+    MOD = { code = "MOD", name = "Medal of Honour" },
+    COG = { code = "COG", name = "Cross of Glory", highCommandOnly = true },
+    MOS = { code = "MOS", name = "Medallion of Service" },
 }
 
 -- Scoreboard settings
