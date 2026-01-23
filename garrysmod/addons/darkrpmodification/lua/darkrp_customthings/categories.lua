@@ -8,16 +8,51 @@ https://darkrp.miraheze.org/wiki/DarkRP:Categories
 
 In case that page can't be reached, here's an example with explanation:
 
-DarkRP.createCategory{
-    name = "Citizens", -- The name of the category.
-    categorises = "jobs", -- What it categorises. MUST be one of "jobs", "entities", "shipments", "weapons", "vehicles", "ammo".
-    startExpanded = true, -- Whether the category is expanded when you open the F4 menu.
-    color = Color(0, 107, 0, 255), -- The color of the category header.
-    canSee = function(ply) return true end, -- OPTIONAL: whether the player can see this category AND EVERYTHING IN IT.
-    sortOrder = 100, -- OPTIONAL: With this you can decide where your category is. Low numbers to put it on top, high numbers to put it on the bottom. It's 100 by default.
-}
-
-
 Add new categories under the next line!
 ---------------------------------------------------------------------------]]
+
+DarkRP.createCategory{
+    name = "Clones",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(70, 130, 255, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 10,
+}
+
+DarkRP.createCategory{
+    name = "501st",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(50, 100, 255, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 20,
+}
+
+DarkRP.createCategory{
+    name = "Shock",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(200, 50, 50, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 30,
+}
+
+DarkRP.createCategory{
+    name = "212th",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(255, 180, 50, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 40,
+}
+
+DarkRP.createCategory{
+    name = "High Command",
+    categorises = "jobs",
+    startExpanded = true,
+    color = Color(180, 80, 180, 255),
+    canSee = function(ply) return true end,
+    sortOrder = 5,
+}
 
